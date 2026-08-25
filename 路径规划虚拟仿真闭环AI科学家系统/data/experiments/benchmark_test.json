@@ -1,0 +1,37 @@
+[
+  {
+    "avg_time": 0.0005,
+    "avg_path_length": 103.0,
+    "success_rate": 1.0,
+    "stability_score": 0.8403,
+    "algorithm": "A*"
+  },
+  {
+    "avg_time": 0.0063,
+    "avg_path_length": 19.0,
+    "success_rate": 1.0,
+    "stability_score": 0.997,
+    "algorithm": "混合优化算法"
+  },
+  {
+    "avg_time": 0.3104,
+    "avg_path_length": 0,
+    "success_rate": 0.0,
+    "stability_score": 0.999,
+    "algorithm": "ACO"
+  },
+  {
+    "avg_time": 0.1705,
+    "avg_path_length": 0,
+    "success_rate": 0.0,
+    "stability_score": 0.9969,
+    "algorithm": "PSO"
+  },
+  {
+    "avg_time": 1.4535,
+    "avg_path_length": 0,
+    "success_rate": 0.0,
+    "stability_score": 0.989,
+    "algorithm": "SA"
+  }
+]

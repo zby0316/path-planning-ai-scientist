@@ -1,0 +1,44 @@
+# Tasks
+
+- [x] Task 1: 创建统一日志系统
+  - [x] SubTask 1.1：创建 `utils/__init__.py` 空文件
+  - [x] SubTask 1.2：创建 `utils/logging_config.py`，实现 `setup_logging()` 函数：配置 root logger 同时输出到文件（`RotatingFileHandler`，按大小轮转，保留 7 个备份）和控制台（`StreamHandler`）；日志格式为 `%(asctime)s [%(levelname)s] %(name)s: %(message)s`；日志级别从环境变量 `LOG_LEVEL` 读取，默认 INFO；确保 `data/logs/` 目录自动创建
+  - [x] SubTask 1.3：修改 `config.py`，添加 `LOG_LEVEL` 和 `LOG_FILE` 两个配置项（使用 `os.getenv` 读取，带默认值），并在文件顶部确认 `import os` 已存在
+- [x] Task 2: 在 Orchestrator 关键节点添加日志
+  - [x] SubTask 2.1：修改 `agents/orchestrator_agent.py`，在 `run()` 方法开头添加 INFO 日志记录流水线开始（含 env_input 关键字段摘要）
+  - [x] SubTask 2.2：在 `_safe_step()` 方法中：执行前添加 INFO 日志记录步骤名称；执行后添加 INFO 日志记录步骤完成（含耗时）；异常时升级为 ERROR 级别并输出完整堆栈（通过 `exc_info=True`）
+  - [x] SubTask 2.3：在 `run()` 方法末尾添加 INFO 日志记录流水线完成（含总耗时和 state 摘要）
+- [x] Task 3: 在所有智能体异常捕获处添加 error 日志
+  - [x] SubTask 3.1：在 `agents/experiment_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.2：在 `agents/hypothesis_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.3：在 `agents/fact_extraction_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.4：在 `agents/literature_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.5：在 `agents/explanation_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.6：在 `agents/decision_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.7：在 `agents/evaluation_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.8：在 `agents/rule_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.9：在 `agents/knowledge_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.10：在 `agents/environment_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.11：在 `agents/data_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.12：在 `agents/reflection_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.13：在 `agents/human_loop_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.14：在 `agents/map_analysis_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.15：在 `agents/rag_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+  - [x] SubTask 3.16：在 `agents/citation_agent.py` 的所有 `except` 块中添加 `logger.error()` 调用（含 `exc_info=True`）
+- [x] Task 4: 创建 FastAPI 后端服务
+  - [x] SubTask 4.1：创建 `api/__init__.py` 空文件
+  - [x] SubTask 4.2：创建 `api/schemas.py`，定义 Pydantic 模型：`EnvInputRequest`（含 Field 校验，obstacle_ratio 范围 0-1）、`DecisionResponse`、`HypothesisResponse`、`ReportResponse`、`ExperimentRequest`、`ExperimentResponse`
+  - [x] SubTask 4.3：创建 `api/server.py`，实现 FastAPI 应用：CORS 中间件、请求速率限制中间件（内存字典，60 秒窗口 30 次上限）、`GET /health`、`POST /analyze`、`POST /experiment`（异步，返回 run_id 和 HTTP 202）、`GET /experiment/{run_id}`（查询状态）、`GET /report/{run_id}`（返回 Markdown 文本）
+  - [x] SubTask 4.4：修改 `requirements.txt`，添加 `fastapi>=0.104.0` 和 `uvicorn[standard]>=0.24.0`
+- [x] Task 5: 完善配置管理与环境变量
+  - [x] SubTask 5.1：修改 `config.py`，将所有路径配置（`KNOWLEDGE_BASE_DIR`、`DATA_DIR`、`MAPS_DIR`、`EXPERIMENTS_DIR`、`LOGS_DIR`、`REPORTS_DIR`）改为 `os.getenv("VAR", default)` 模式
+  - [x] SubTask 5.2：修改 `config.py`，将所有阈值配置（`OBSTACLE_LOW_THRESHOLD`、`OBSTACLE_MEDIUM_THRESHOLD`、`POOR_CONNECTIVITY_THRESHOLD`、`SCORE_GAP_THRESHOLD`、所有惩罚参数）改为 `os.getenv("VAR", default)` 模式，注意数值类型转换（float）
+  - [x] SubTask 5.3：修改 `config.py`，将 `WEIGHTS` 评分权重改为支持从环境变量 `WEIGHTS_JSON`（JSON 字符串）或 `.env` 文件加载，未设置时回退到原硬编码默认值
+  - [x] SubTask 5.4：修改 `config.py`，添加 LLM 多 provider 配置：`LLM_PROVIDER = os.getenv("LLM_PROVIDER", "deepseek")`，并确保各 LLM 相关的 API URL / Model Name 配置也支持环境变量覆盖
+  - [x] SubTask 5.5：修改 `.env.example`，扩展至 15+ 个配置项，每项附中文注释说明用途和取值范围
+
+# Task Dependencies
+- Task 2 依赖 Task 1（需要 `utils/logging_config.py` 先就位）
+- Task 3 依赖 Task 1（需要日志系统先就位）
+- Task 4 与 Task 1-3 无依赖，可并行执行
+- Task 5 与 Task 1-4 无依赖，可并行执行（但 SubTask 5.1-5.4 需在修改 config.py 后，SubTask 5.5 可并行）

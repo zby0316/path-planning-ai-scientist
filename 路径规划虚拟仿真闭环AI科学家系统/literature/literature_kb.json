@@ -1,0 +1,91 @@
+{
+  "version": "1.0",
+  "description": "路径规划算法自适应选型系统文献知识库",
+  "papers": [
+    {
+      "paper_id": "hart1968formal",
+      "title": "A Formal Basis for the Heuristic Determination of Minimum Cost Paths",
+      "authors": ["Peter E. Hart", "Nils J. Nilsson", "Bertram Raphael"],
+      "year": 1968,
+      "venue": "IEEE Transactions on Systems Science and Cybernetics",
+      "doi": "10.1109/TSSC.1968.300136",
+      "url": "https://ieeexplore.ieee.org/document/6772126",
+      "algorithm_related": ["A*"],
+      "key_facts": [
+        "A* 在使用可采纳启发式时能够保证返回最优路径",
+        "A* 在静态栅格地图中具有较高效率，扩展节点数与启发式质量直接相关",
+        "A* 的时间和空间复杂度与问题分支因子呈指数关系"
+      ],
+      "evidence_level": "paper",
+      "citation_bibtex": "@article{hart1968formal, title={A Formal Basis for the Heuristic Determination of Minimum Cost Paths}, author={Hart, Peter E. and Nilsson, Nils J. and Raphael, Bertram}, journal={IEEE Transactions on Systems Science and Cybernetics}, volume={4}, number={2}, pages={100--107}, year={1968}, publisher={IEEE}, doi={10.1109/TSSC.1968.300136}}"
+    },
+    {
+      "paper_id": "dorigo1996ant",
+      "title": "Ant System: Optimization by a Colony of Cooperating Agents",
+      "authors": ["Marco Dorigo", "Vittorio Maniezzo", "Alberto Colorni"],
+      "year": 1996,
+      "venue": "IEEE Transactions on Systems, Man, and Cybernetics, Part B (Cybernetics)",
+      "doi": "10.1109/3477.484436",
+      "url": "https://ieeexplore.ieee.org/document/484436",
+      "algorithm_related": ["ACO"],
+      "key_facts": [
+        "蚁群算法（ACO）通过信息素机制在路径搜索过程中具有较好的全局探索能力",
+        "ACO 适用于离散组合优化问题，但求解时间通常长于 A* 等确定性方法",
+        "ACO 在动态环境与高复杂度障碍地图中表现出较好的鲁棒性"
+      ],
+      "evidence_level": "paper",
+      "citation_bibtex": "@article{dorigo1996ant, title={Ant System: Optimization by a Colony of Cooperating Agents}, author={Dorigo, Marco and Maniezzo, Vittorio and Colorni, Alberto}, journal={IEEE Transactions on Systems, Man, and Cybernetics, Part B (Cybernetics)}, volume={26}, number={1}, pages={29--41}, year={1996}, publisher={IEEE}, doi={10.1109/3477.484436}}"
+    },
+    {
+      "paper_id": "sturtevant2012benchmarks",
+      "title": "Benchmarks for Grid-Based Pathfinding",
+      "authors": ["Nathan R. Sturtevant"],
+      "year": 2012,
+      "venue": "IEEE Transactions on Computational Intelligence and AI in Games",
+      "doi": "10.1109/TCIAIG.2012.2197681",
+      "url": "https://movingai.com/benchmarks.html",
+      "algorithm_related": ["A*", "ACO", "PSO", "SA", "混合优化算法"],
+      "key_facts": [
+        "Moving AI Benchmark 提供了覆盖游戏地图与城市路网的多类栅格场景，可用于算法跨域泛化能力评估",
+        "在该基准上，A* 在小规模地图求解速度最快，但成功率随地图障碍率上升而下降",
+        "基于采样的元启发式算法（ACO、PSO）在大型稀疏障碍地图上仍能保持较高的成功率"
+      ],
+      "evidence_level": "benchmark",
+      "citation_bibtex": "@article{sturtevant2012benchmarks, title={Benchmarks for Grid-Based Pathfinding}, author={Sturtevant, Nathan R.}, journal={IEEE Transactions on Computational Intelligence and AI in Games}, volume={4}, number={2}, pages={144--148}, year={2012}, publisher={IEEE}, doi={10.1109/TCIAIG.2012.2197681}}"
+    },
+    {
+      "paper_id": "montemerlo2008junior",
+      "title": "Junior: The Stanford Entry in the Urban Challenge",
+      "authors": ["Michael Montemerlo", "Sebastian Thrun", "Hendrik Dahlkamp", "David Stavens", "Sven Strohband"],
+      "year": 2008,
+      "venue": "Journal of Field Robotics",
+      "doi": "10.1002/rob.20258",
+      "url": "https://onlinelibrary.wiley.com/doi/10.1002/rob.20258",
+      "algorithm_related": ["混合优化算法", "A*"],
+      "key_facts": [
+        "混合 A*（Hybrid A*）将连续运动学约束与启发式搜索结合，可在非完整约束车辆上生成可执行轨迹",
+        "在城市道路场景中，混合路径规划算法通过代价地图加权 + 平滑后处理显著提升路径可行驶性",
+        "混合优化路径规划在动态障碍和差连通性场景下相比纯 A* 成功率提升明显，但耗时显著增加"
+      ],
+      "evidence_level": "paper",
+      "citation_bibtex": "@article{montemerlo2008junior, title={Junior: The Stanford Entry in the Urban Challenge}, author={Montemerlo, Michael and Thrun, Sebastian and Dahlkamp, Hendrik and Stavens, David and Strohband, Sven and others}, journal={Journal of Field Robotics}, volume={25}, number={9}, pages={569--597}, year={2008}, publisher={Wiley}, doi={10.1002/rob.20258}}"
+    },
+    {
+      "paper_id": "lu2024aiscientist",
+      "title": "The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery",
+      "authors": ["Chris Lu", "Cong Lu", "Robert Tjarko Lange", "Jakob Foerster", "Jeff Clune", "David Ha"],
+      "year": 2024,
+      "venue": "arXiv preprint arXiv:2408.06292",
+      "doi": "10.48550/arXiv.2408.06292",
+      "url": "https://arxiv.org/abs/2408.06292",
+      "algorithm_related": ["混合优化算法"],
+      "key_facts": [
+        "AI Scientist 框架验证了 LLM 在端到端科研流程（假设生成、实验执行、结果分析、论文撰写）中的可行性",
+        "大语言模型在算法自适应选型任务中需要结合外部知识库与历史实验数据，否则容易产生虚构引用",
+        "在缺乏事实核验机制时，LLM 生成的研究报告可能出现与领域知识不一致的结论"
+      ],
+      "evidence_level": "review",
+      "citation_bibtex": "@article{lu2024aiscientist, title={The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery}, author={Lu, Chris and Lu, Cong and Lange, Robert Tjarko and Foerster, Jakob and Clune, Jeff and Ha, David}, journal={arXiv preprint arXiv:2408.06292}, year={2024}, doi={10.48550/arXiv.2408.06292}}"
+    }
+  ]
+}

@@ -1,0 +1,280 @@
+{
+  "generated_at": "2026-07-11T08:14:36Z",
+  "project_root": "D:\\BianChengDamom\\PycharmProjects\\PythonProject\\路径规划算法自适应选型多智能体 AI Scientist 系统\\路径规划虚拟仿真闭环AI科学家系统",
+  "elapsed_seconds": 13.567467700000634,
+  "offline_only": true,
+  "algorithm_config": {
+    "A*": "project default",
+    "ACO": {
+      "n_ants": 10,
+      "n_iterations": 20
+    },
+    "PSO": {
+      "n_particles": 10,
+      "n_iterations": 20
+    },
+    "SA": {
+      "initial_temp": 100.0,
+      "cooling_rate": 0.9,
+      "min_temp": 0.01,
+      "max_iter_per_temp": 10
+    },
+    "Hybrid": "project default: A* + line-of-sight smoothing"
+  },
+  "static_design": {
+    "ratios": [
+      0.15,
+      0.35,
+      0.55
+    ],
+    "scales": [
+      [
+        30,
+        30
+      ],
+      [
+        50,
+        50
+      ]
+    ],
+    "maps_per_cell": 10,
+    "repeats": 3
+  },
+  "dynamic_design": {
+    "ratios": [
+      0.35,
+      0.55
+    ],
+    "scale": [
+      30,
+      30
+    ],
+    "rates": [
+      0.03,
+      0.08
+    ],
+    "maps_per_cell": 5,
+    "frames": 5,
+    "repeats": 1
+  },
+  "validation": {
+    "connected_corridor_reserved": true,
+    "endpoint_check": true,
+    "adjacency_check_for_grid_algorithms": true,
+    "bresenham_collision_check_for_hybrid": true,
+    "geometric_length": true
+  },
+  "counts": {
+    "static_records": 900,
+    "dynamic_records": 500
+  },
+  "static_by_algorithm": [
+    {
+      "algorithm": "A*",
+      "runs": 180,
+      "reported_success_rate": 1.0,
+      "valid_success_rate": 1.0,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.0008085222222891591,
+      "median_runtime_s": 0.0004711500005214475,
+      "avg_geometric_length": 78.0,
+      "avg_turning_points": 29.15,
+      "avg_safety_score": 0.03361693410436828,
+      "avg_nodes_expanded": 513.45
+    },
+    {
+      "algorithm": "ACO",
+      "runs": 180,
+      "reported_success_rate": 0.06111111111111111,
+      "valid_success_rate": 0.06111111111111111,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.025950495000031677,
+      "median_runtime_s": 0.02377849999902537,
+      "avg_geometric_length": 93.27272727272727,
+      "avg_turning_points": 56.27272727272727,
+      "avg_safety_score": 0.053968948439143134,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "algorithm": "PSO",
+      "runs": 180,
+      "reported_success_rate": 0.26666666666666666,
+      "valid_success_rate": 0.26666666666666666,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.015915309444517335,
+      "median_runtime_s": 0.011589449999519275,
+      "avg_geometric_length": 85.0,
+      "avg_turning_points": 28.1875,
+      "avg_safety_score": 0.04278429728684891,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "algorithm": "SA",
+      "runs": 180,
+      "reported_success_rate": 0.26666666666666666,
+      "valid_success_rate": 0.26666666666666666,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.008134900555574455,
+      "median_runtime_s": 0.00615159999961179,
+      "avg_geometric_length": 85.0,
+      "avg_turning_points": 28.1875,
+      "avg_safety_score": 0.04278429728684891,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "algorithm": "混合优化算法",
+      "runs": 180,
+      "reported_success_rate": 1.0,
+      "valid_success_rate": 1.0,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.003064089444322033,
+      "median_runtime_s": 0.0025664500008133473,
+      "avg_geometric_length": 61.97352799677729,
+      "avg_turning_points": 6.766666666666667,
+      "avg_safety_score": 0.034923477798493745,
+      "avg_nodes_expanded": 513.45
+    }
+  ],
+  "dynamic_by_algorithm": [
+    {
+      "dynamic_rate": 0.03,
+      "algorithm": "A*",
+      "runs": 50,
+      "reported_success_rate": 1.0,
+      "valid_success_rate": 1.0,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.000254727999890747,
+      "median_runtime_s": 0.0002506499995433842,
+      "avg_geometric_length": 58.0,
+      "avg_turning_points": 24.46,
+      "avg_safety_score": 0.03812088487544763,
+      "avg_nodes_expanded": 160.08
+    },
+    {
+      "dynamic_rate": 0.03,
+      "algorithm": "ACO",
+      "runs": 50,
+      "reported_success_rate": 0.0,
+      "valid_success_rate": 0.0,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.018363661999901523,
+      "median_runtime_s": 0.017707449999761593,
+      "avg_geometric_length": null,
+      "avg_turning_points": null,
+      "avg_safety_score": null,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "dynamic_rate": 0.03,
+      "algorithm": "PSO",
+      "runs": 50,
+      "reported_success_rate": 0.14,
+      "valid_success_rate": 0.14,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.009824592000040867,
+      "median_runtime_s": 0.011055200000555487,
+      "avg_geometric_length": 64.28571428571429,
+      "avg_turning_points": 29.142857142857142,
+      "avg_safety_score": 0.037659789108397464,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "dynamic_rate": 0.03,
+      "algorithm": "SA",
+      "runs": 50,
+      "reported_success_rate": 0.14,
+      "valid_success_rate": 0.14,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.005203892000245105,
+      "median_runtime_s": 0.005677199998899596,
+      "avg_geometric_length": 64.28571428571429,
+      "avg_turning_points": 29.142857142857142,
+      "avg_safety_score": 0.037659789108397464,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "dynamic_rate": 0.03,
+      "algorithm": "混合优化算法",
+      "runs": 50,
+      "reported_success_rate": 1.0,
+      "valid_success_rate": 1.0,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.0015936399998827254,
+      "median_runtime_s": 0.0014903500004948,
+      "avg_geometric_length": 45.13473168886123,
+      "avg_turning_points": 5.62,
+      "avg_safety_score": 0.03818961806972355,
+      "avg_nodes_expanded": 160.08
+    },
+    {
+      "dynamic_rate": 0.08,
+      "algorithm": "A*",
+      "runs": 50,
+      "reported_success_rate": 1.0,
+      "valid_success_rate": 1.0,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.00024660999988554975,
+      "median_runtime_s": 0.00024044999918260146,
+      "avg_geometric_length": 58.0,
+      "avg_turning_points": 26.06,
+      "avg_safety_score": 0.038678282198667396,
+      "avg_nodes_expanded": 150.06
+    },
+    {
+      "dynamic_rate": 0.08,
+      "algorithm": "ACO",
+      "runs": 50,
+      "reported_success_rate": 0.0,
+      "valid_success_rate": 0.0,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.01774961999995867,
+      "median_runtime_s": 0.018474000000423985,
+      "avg_geometric_length": null,
+      "avg_turning_points": null,
+      "avg_safety_score": null,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "dynamic_rate": 0.08,
+      "algorithm": "PSO",
+      "runs": 50,
+      "reported_success_rate": 0.2,
+      "valid_success_rate": 0.2,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.009246576000077767,
+      "median_runtime_s": 0.010672699999304314,
+      "avg_geometric_length": 69.0,
+      "avg_turning_points": 37.7,
+      "avg_safety_score": 0.03593826043624658,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "dynamic_rate": 0.08,
+      "algorithm": "SA",
+      "runs": 50,
+      "reported_success_rate": 0.2,
+      "valid_success_rate": 0.2,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.004953290000048583,
+      "median_runtime_s": 0.005678949999492033,
+      "avg_geometric_length": 69.0,
+      "avg_turning_points": 37.7,
+      "avg_safety_score": 0.03593826043624658,
+      "avg_nodes_expanded": 0.0
+    },
+    {
+      "dynamic_rate": 0.08,
+      "algorithm": "混合优化算法",
+      "runs": 50,
+      "reported_success_rate": 1.0,
+      "valid_success_rate": 1.0,
+      "invalid_report_rate": 0.0,
+      "avg_runtime_s": 0.0015311520000977907,
+      "median_runtime_s": 0.0015292500002033194,
+      "avg_geometric_length": 45.612649927978694,
+      "avg_turning_points": 5.2,
+      "avg_safety_score": 0.03958981462337489,
+      "avg_nodes_expanded": 150.06
+    }
+  ]
+}

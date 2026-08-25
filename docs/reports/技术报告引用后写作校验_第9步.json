@@ -1,0 +1,117 @@
+{
+  "filepath": "\u62a5\u544a\\\u6280\u672f\u62a5\u544a\u53c2\u8003\u6587\u732e\u6c60_42\u6761.bib",
+  "total_entries": 42,
+  "valid_entries": 42,
+  "errors": [],
+  "warnings": [
+    {
+      "type": "missing_recommended_field",
+      "field": "doi",
+      "severity": "medium",
+      "message": "Entry Bergstra_2012: Missing recommended field \"doi\"",
+      "entry": "Bergstra_2012"
+    },
+    {
+      "type": "missing_recommended_field",
+      "field": "pages",
+      "severity": "medium",
+      "message": "Entry Lewis_2020: Missing recommended field \"pages\"",
+      "entry": "Lewis_2020"
+    },
+    {
+      "type": "missing_recommended_field",
+      "field": "pages",
+      "severity": "medium",
+      "message": "Entry Yao_2023: Missing recommended field \"pages\"",
+      "entry": "Yao_2023"
+    },
+    {
+      "type": "missing_recommended_field",
+      "field": "pages",
+      "severity": "medium",
+      "message": "Entry Schick_2023: Missing recommended field \"pages\"",
+      "entry": "Schick_2023"
+    },
+    {
+      "type": "missing_recommended_field",
+      "field": "pages",
+      "severity": "medium",
+      "message": "Entry Shinn_2023: Missing recommended field \"pages\"",
+      "entry": "Shinn_2023"
+    },
+    {
+      "type": "missing_recommended_field",
+      "field": "pages",
+      "severity": "medium",
+      "message": "Entry Wu_2024: Missing recommended field \"pages\"",
+      "entry": "Wu_2024"
+    },
+    {
+      "type": "missing_recommended_field",
+      "field": "doi",
+      "severity": "medium",
+      "message": "Entry Pineau_2021: Missing recommended field \"doi\"",
+      "entry": "Pineau_2021"
+    },
+    {
+      "type": "missing_recommended_field",
+      "field": "doi",
+      "severity": "medium",
+      "message": "Entry Demsar_2006: Missing recommended field \"doi\"",
+      "entry": "Demsar_2006"
+    }
+  ],
+  "duplicates": [],
+  "venue_standard_checked": null,
+  "min_count_checked": 42,
+  "manuscript_results": {
+    "checked": true,
+    "manuscript_filepath": "\u62a5\u544a\\\u6280\u672f\u62a5\u544a\u5f15\u7528\u952e\u4ee3\u7406_\u7b2c9\u6b65.md",
+    "cited_keys": [
+      "Storn_1997",
+      "Park_2023",
+      "Pivtoraiko_2009",
+      "Kotthoff_2014",
+      "Blum_2003",
+      "Wu_2024",
+      "Demsar_2006",
+      "Wooldridge_1995",
+      "Nash_2007",
+      "Clerc_2002",
+      "Jennings_1998",
+      "Wolpert_1997",
+      "Dechter_1985",
+      "Lewis_2020",
+      "Smith_Miles_2009",
+      "Pineau_2021",
+      "Hart_1968",
+      "Rice_1976",
+      "Kavraki_1996",
+      "Lu_2024",
+      "Bergstra_2012",
+      "Kirkpatrick_1983",
+      "Stentz_1995",
+      "Dorigo_1996",
+      "Karaman_2011",
+      "Shinn_2023",
+      "Dolgov_2008",
+      "Sturtevant_2012",
+      "Boiko_2023",
+      "Koenig_2002",
+      "Kerschke_2019",
+      "Dorigo_1997",
+      "Kennedy_1995",
+      "Yao_2023",
+      "Hutter_2011",
+      "LaValle_1998",
+      "Dijkstra_1959",
+      "Stone_2000",
+      "Romera_Paredes_2024",
+      "Wang_2024",
+      "Schick_2023",
+      "Thornton_2013"
+    ],
+    "missing_keys": [],
+    "unused_keys": []
+  }
+}

@@ -1,0 +1,122 @@
+[
+  {
+    "algorithm": "A*",
+    "scene_level": "低复杂度",
+    "avg_time": 0.12,
+    "avg_path_length": 108.0,
+    "success_rate": 0.98,
+    "stability_score": 0.95
+  },
+  {
+    "algorithm": "ACO",
+    "scene_level": "低复杂度",
+    "avg_time": 1.20,
+    "avg_path_length": 112.0,
+    "success_rate": 0.96,
+    "stability_score": 0.90
+  },
+  {
+    "algorithm": "PSO",
+    "scene_level": "低复杂度",
+    "avg_time": 1.10,
+    "avg_path_length": 116.0,
+    "success_rate": 0.92,
+    "stability_score": 0.86
+  },
+  {
+    "algorithm": "SA",
+    "scene_level": "低复杂度",
+    "avg_time": 0.90,
+    "avg_path_length": 118.0,
+    "success_rate": 0.90,
+    "stability_score": 0.84
+  },
+  {
+    "algorithm": "混合优化算法",
+    "scene_level": "低复杂度",
+    "avg_time": 1.80,
+    "avg_path_length": 109.0,
+    "success_rate": 0.97,
+    "stability_score": 0.93
+  },
+  {
+    "algorithm": "A*",
+    "scene_level": "中复杂度",
+    "avg_time": 0.75,
+    "avg_path_length": 142.0,
+    "success_rate": 0.82,
+    "stability_score": 0.80
+  },
+  {
+    "algorithm": "ACO",
+    "scene_level": "中复杂度",
+    "avg_time": 1.80,
+    "avg_path_length": 130.0,
+    "success_rate": 0.91,
+    "stability_score": 0.87
+  },
+  {
+    "algorithm": "PSO",
+    "scene_level": "中复杂度",
+    "avg_time": 1.50,
+    "avg_path_length": 136.0,
+    "success_rate": 0.87,
+    "stability_score": 0.84
+  },
+  {
+    "algorithm": "SA",
+    "scene_level": "中复杂度",
+    "avg_time": 1.20,
+    "avg_path_length": 139.0,
+    "success_rate": 0.84,
+    "stability_score": 0.81
+  },
+  {
+    "algorithm": "混合优化算法",
+    "scene_level": "中复杂度",
+    "avg_time": 2.20,
+    "avg_path_length": 128.0,
+    "success_rate": 0.93,
+    "stability_score": 0.90
+  },
+  {
+    "algorithm": "A*",
+    "scene_level": "高复杂度",
+    "avg_time": 2.40,
+    "avg_path_length": 190.0,
+    "success_rate": 0.55,
+    "stability_score": 0.60
+  },
+  {
+    "algorithm": "ACO",
+    "scene_level": "高复杂度",
+    "avg_time": 2.60,
+    "avg_path_length": 158.0,
+    "success_rate": 0.88,
+    "stability_score": 0.86
+  },
+  {
+    "algorithm": "PSO",
+    "scene_level": "高复杂度",
+    "avg_time": 2.20,
+    "avg_path_length": 170.0,
+    "success_rate": 0.78,
+    "stability_score": 0.76
+  },
+  {
+    "algorithm": "SA",
+    "scene_level": "高复杂度",
+    "avg_time": 1.90,
+    "avg_path_length": 176.0,
+    "success_rate": 0.72,
+    "stability_score": 0.73
+  },
+  {
+    "algorithm": "混合优化算法",
+    "scene_level": "高复杂度",
+    "avg_time": 3.00,
+    "avg_path_length": 152.0,
+    "success_rate": 0.94,
+    "stability_score": 0.91
+  }
+]

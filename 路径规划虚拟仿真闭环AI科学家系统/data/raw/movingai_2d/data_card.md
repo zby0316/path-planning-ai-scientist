@@ -1,0 +1,11 @@
+# 数据卡：Moving AI 2D - dao/arena
+- **数据集名称**：Moving AI 2D - dao/arena
+- **来源**：https://www.movingai.com/benchmarks/grids.html
+- **下载链接**：https://www.movingai.com/benchmarks/grids/dao/arena.map
+- **许可协议**：学术使用
+- **地图类型**：2D 栅格地图
+- **地图数量**：1
+- **起终点任务数量**：0
+- **使用目的**：作为路径规划算法适配实验的公开基准地图
+- **预处理方式**：无预处理；如需可统一做障碍二值化（@/O/T/W→1，.→0）
+- **是否可复现**：True
