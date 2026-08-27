@@ -50,7 +50,13 @@ class LiteratureAgent:
             return
 
         items = payload.get("papers", []) if isinstance(payload, dict) else payload
-        self.papers = [PaperRecord.from_dict(item) for item in items if isinstance(item, dict)]
+        # 复核闸门：未复核/被拒的条目不得进入检索范围
+        self.papers = [
+            PaperRecord.from_dict(item)
+            for item in items
+            if isinstance(item, dict)
+            and item.get("review_status", "approved") not in ("pending", "rejected")
+        ]
 
     def _save_kb(self) -> None:
         from pathlib import Path

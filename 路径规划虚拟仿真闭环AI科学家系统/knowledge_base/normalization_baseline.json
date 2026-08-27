@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "generated_at": "2026-08-27T02:25:26+00:00",
+  "mode": "reference_scenarios",
+  "compute_limit": "medium",
+  "n_runs_per_algo": 3,
+  "maps_per_config": 5,
+  "scales": [
+    [
+      50,
+      50
+    ],
+    [
+      100,
+      100
+    ]
+  ],
+  "base_seed": 2026071100,
+  "elapsed_seconds": 213.5,
+  "metric_keys": [
+    "time",
+    "path_length",
+    "success_rate",
+    "stability",
+    "smoothness",
+    "safety_score",
+    "expanded_nodes",
+    "compute_cost",
+    "robustness"
+  ],
+  "scene_levels": {
+    "低复杂度": {
+      "time": [
+        0.00818,
+        0.50643
+      ],
+      "path_length": [
+        14.0,
+        153.2
+      ],
+      "success_rate": [
+        0.033,
+        1.0
+      ],
+      "stability": [
+        0.92728,
+        0.99467
+      ],
+      "smoothness": [
+        0.05571,
+        0.3153
+      ],
+      "safety_score": [
+        0.00377,
+        0.02848
+      ],
+      "expanded_nodes": [
+        4951.6,
+        96413.1
+      ],
+      "compute_cost": [
+        0.1,
+        1.0
+      ],
+      "robustness": [
+        0.0,
+        1.0
+      ]
+    },
+    "中复杂度": {
+      "time": [
+        0.00115,
+        0.50084
+      ],
+      "path_length": [
+        0.0,
+        148.0
+      ],
+      "success_rate": [
+        0.0,
+        1.0
+      ],
+      "stability": [
+        0.9054,
+        0.99924
+      ],
+      "smoothness": [
+        0.0,
+        0.7048
+      ],
+      "safety_score": [
+        0.0,
+        0.01806
+      ],
+      "expanded_nodes": [
+        0.0,
+        10400.0
+      ],
+      "compute_cost": [
+        0.0,
+        0.49653
+      ],
+      "robustness": [
+        0.0,
+        0.7
+      ]
+    },
+    "高复杂度": {
+      "time": [
+        0.00032,
+        0.50113
+      ],
+      "path_length": [
+        0.0,
+        148.0
+      ],
+      "success_rate": [
+        0.0,
+        1.0
+      ],
+      "stability": [
+        0.92714,
+        0.99928
+      ],
+      "smoothness": [
+        0.0,
+        0.79823
+      ],
+      "safety_score": [
+        0.0,
+        0.01593
+      ],
+      "expanded_nodes": [
+        0.0,
+        10315.0
+      ],
+      "compute_cost": [
+        0.0,
+        0.11834
+      ],
+      "robustness": [
+        0.0,
+        0.03333
+      ]
+    }
+  }
+}

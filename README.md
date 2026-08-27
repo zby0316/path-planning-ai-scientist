@@ -7,11 +7,23 @@
 
 ## 核心特性
 
-- **可复现**：统一随机种子、超时与重复次数，实验结果可复核
+- **可复现**：统一随机种子、超时与重复次数，实验结果可复核；每图×算法×重复的种子确定性派生，元启发式算法内部 RNG 全部受种子控制
 - **可解释**：LLM 生成选型依据 + 推理链可视化
 - **可证伪**：假设含变量/对照/阈值/否证条件/实验计划
-- **可追溯**：每条外部结论定位到文献，每条系统结论定位到实验记录
+- **可追溯**：每条外部结论定位到文献，每条系统结论定位到实验记录；逐次原始运行（run_raw）入库，聚合值可由明细重算
+- **诚实失败**：独立路径校验（起终点/邻接/碰撞/越界）区分"算法自报成功"与"校验后成功"；时间预算超时如实标记 timeout
 - **离线降级**：无 Qwen API 时实验与选型仍可运行（规则路径兜底）
+
+## 实验可信性机制
+
+| 机制 | 说明 |
+|---|---|
+| 种子贯通 | 每次运行种子 = base_seed + algo_index×100 + run_idx，地图生成与算法内部 RNG 均受控 |
+| 时间预算 | `RUNTIME_BUDGET_S`（low=0.05s / medium=0.5s / high=2.0s，可 env 覆盖），超时协作式中断并打 `timeout` 标记 |
+| 逐次原始运行 | `run_raw` 表保存每次运行的种子/耗时/双轨成功/校验原因/几何长度，聚合行与明细自洽 |
+| 独立路径校验 | `evaluation/path_validator.py`：Bresenham 逐段碰撞检查，产出 reported/valid_success 双轨 |
+| 基准集归一化 | `tools/build_normalization_baseline.py` 预生成各场景等级九维指标区间，评分跨场景可比（缺失时自动降级当批 min/max 并标注） |
+| 文献受控导入 | 候选先入 `literature/literature_pending.json` 暂存区，经 `tools/review_literature.py` 人工复核后才进可信库与 RAG 检索 |
 
 ## 技术栈
 
@@ -139,6 +151,14 @@ A\*、ACO（蚁群）、PSO（粒子群）、SA（模拟退火）、混合优化
 cd ".\路径规划虚拟仿真闭环AI科学家系统"
 .\.venv\Scripts\python.exe -B -m pytest -p no:cacheprovider tests -q
 .\.venv\Scripts\python.exe -B .\main.py
+
+# 重建归一化基准集（参考场景矩阵，约 3 分钟）
+.\.venv\Scripts\python.exe -B tools\build_normalization_baseline.py
+
+# 文献导入 → 人工复核 → 入可信库
+.\.venv\Scripts\python.exe -B tools\import_literature.py --write
+.\.venv\Scripts\python.exe -B tools\review_literature.py --checklist
+.\.venv\Scripts\python.exe -B tools\review_literature.py --approve <paper_id> --reviewer <姓名>
 ```
 
 真实密钥只允许保存在本地 `.env` 或 Streamlit secrets 中，不得提交到 Git。

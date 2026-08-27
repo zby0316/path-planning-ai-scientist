@@ -30,6 +30,9 @@ ALGORITHM_PROFILE_PATH = _configured_path(
 HISTORICAL_RESULTS_PATH = _configured_path(
     "HISTORICAL_RESULTS_PATH", Path(KNOWLEDGE_BASE_DIR) / "historical_results.json"
 )
+NORMALIZATION_BASELINE_PATH = _configured_path(
+    "NORMALIZATION_BASELINE_PATH", Path(KNOWLEDGE_BASE_DIR) / "normalization_baseline.json"
+)
 LITERATURE_KB_PATH = _configured_path(
     "LITERATURE_KB_PATH", PROJECT_ROOT / "literature" / "literature_kb.json"
 )
@@ -45,6 +48,16 @@ OBSTACLE_MEDIUM_THRESHOLD = float(os.getenv("OBSTACLE_MEDIUM_THRESHOLD", "0.50")
 
 # ========== 算力限制等级 ==========
 COMPUTE_LIMITS = ["low", "medium", "high"]  # 算力等级枚举（取值范围：low/medium/high）
+
+# 算力等级 → 单次搜索时间预算（秒），超时中断迭代并如实标记 timeout
+RUNTIME_BUDGET_S = {
+    "low": float(os.getenv("RUNTIME_BUDGET_LOW", "0.05")),
+    "medium": float(os.getenv("RUNTIME_BUDGET_MEDIUM", "0.5")),
+    "high": float(os.getenv("RUNTIME_BUDGET_HIGH", "2.0")),
+}
+
+# 实验全局默认种子（GUI/CLI 未显式指定时使用）
+DEFAULT_EXPERIMENT_SEED = int(os.getenv("DEFAULT_EXPERIMENT_SEED", "42"))
 
 # ========== 允许的算法集合 ==========
 ALLOWED_ALGORITHMS = ["A*", "ACO", "PSO", "SA", "混合优化算法"]  # 系统白名单算法集合
@@ -94,6 +107,9 @@ NORMALIZATION_DIRECTION = {
 
 # 参与评分的指标字段
 SCORING_METRIC_KEYS = list(NORMALIZATION_DIRECTION.keys())
+
+# 归一化模式：'baseline'（预定义基准集区间，跨场景可比）或 'batch'（当批 min/max，旧行为）
+NORMALIZATION_MODE = os.getenv("NORMALIZATION_MODE", "baseline")
 
 # ========== 规则惩罚参数 ==========
 PENALTY_HIGH_TIME_THRESHOLD = float(os.getenv("PENALTY_HIGH_TIME_THRESHOLD", "1.5"))

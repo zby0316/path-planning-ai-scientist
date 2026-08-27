@@ -58,6 +58,7 @@ def execute_decision_pipeline(map_width, map_height, obstacle_ratio, connectivit
         "start_point": [start_x, start_y],
         "target_point": [target_x, target_y],
         "dynamic_change_rate": dynamic_change_rate,
+        "random_seed": random_seed,
     }
     st.session_state.env_input = env_input
 
@@ -79,7 +80,9 @@ def execute_decision_pipeline(map_width, map_height, obstacle_ratio, connectivit
 
     benchmark = BenchmarkRunner()
     benchmark_results = benchmark.run(grid, (start_x, start_y),
-                                       (target_x, target_y), n_runs=3)
+                                       (target_x, target_y), n_runs=3,
+                                       compute_limit=compute_limit,
+                                       base_seed=random_seed)
     st.session_state.benchmark_results = benchmark_results
 
     system = PathPlanningDecisionSystem()
@@ -129,6 +132,7 @@ def execute_decision_pipeline_v2(map_width, map_height, obstacle_ratio, connecti
         "target_point": [target_x, target_y],
         "dynamic_change_rate": dynamic_change_rate,
         "optimization_preference": optimization_preference,
+        "random_seed": random_seed,
     }
     st.session_state.env_input = env_input
 
@@ -158,7 +162,9 @@ def execute_decision_pipeline_v2(map_width, map_height, obstacle_ratio, connecti
 
     benchmark = BenchmarkRunner()
     benchmark_results = benchmark.run(grid, (start_x, start_y),
-                                       (target_x, target_y), n_runs=3)
+                                       (target_x, target_y), n_runs=3,
+                                       compute_limit=compute_limit,
+                                       base_seed=random_seed)
     st.session_state.benchmark_results = benchmark_results
 
     system = PathPlanningDecisionSystem()
@@ -391,12 +397,14 @@ def main():
                         from algorithms.pso import ParticleSwarm
                         from algorithms.sa import SimulatedAnnealing
                         from algorithms.hybrid import HybridAlgorithm
+                        from config import RUNTIME_BUDGET_S
+                        overlay_budget = RUNTIME_BUDGET_S.get(compute_limit, 0.5)
                         algo_classes = {
-                            "A*": AStar(),
-                            "ACO": AntColony(),
-                            "PSO": ParticleSwarm(),
-                            "SA": SimulatedAnnealing(),
-                            "混合优化算法": HybridAlgorithm(),
+                            "A*": AStar(time_budget_s=overlay_budget),
+                            "ACO": AntColony(seed=random_seed, time_budget_s=overlay_budget),
+                            "PSO": ParticleSwarm(seed=random_seed, time_budget_s=overlay_budget),
+                            "SA": SimulatedAnnealing(seed=random_seed, time_budget_s=overlay_budget),
+                            "混合优化算法": HybridAlgorithm(time_budget_s=overlay_budget),
                         }
                         paths = {}
                         sx, sy = st.session_state.start

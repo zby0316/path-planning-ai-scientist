@@ -65,7 +65,16 @@ class KnowledgeRetrievalAgent:
             lengths = [float(it.get("path_length", 0.0)) for it in items]
             successes = [float(bool(it.get("success", 0))) for it in items]
             stab = [float(it.get("stability_score", 0.0)) for it in items]
+            smooth = [float(it.get("smoothness", 0.0) or 0.0) for it in items]
+            safety = [float(it.get("safety_score", 0.0) or 0.0) for it in items]
+            expanded = [float(it.get("expanded_nodes", 0) or 0) for it in items]
+            cost = [float(it.get("compute_cost", 0.0) or 0.0) for it in items]
+            robust = [float(it.get("robustness", 0.0) or 0.0) for it in items]
             n = len(items)
+
+            def _mean(values: list) -> float:
+                return round(sum(values) / n, 4) if values else 0.0
+
             records.append(
                 {
                     "algorithm": algo,
@@ -74,6 +83,11 @@ class KnowledgeRetrievalAgent:
                     "avg_path_length": round(sum(lengths) / n, 2),
                     "success_rate": round(sum(successes) / n, 4),
                     "stability_score": round(sum(stab) / n, 4),
+                    "smoothness": _mean(smooth),
+                    "safety_score": _mean(safety),
+                    "expanded_nodes": round(sum(expanded) / n),
+                    "compute_cost": _mean(cost),
+                    "robustness": _mean(robust),
                 }
             )
         return records

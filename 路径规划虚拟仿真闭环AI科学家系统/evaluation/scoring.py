@@ -1,11 +1,53 @@
 # evaluation/scoring.py — 评分函数（10 维扩展版）
 
+import json
+
 from config import (
     WEIGHTS,
     COMPUTE_LIMIT_WEIGHT_ADJUST,
     NORMALIZATION_DIRECTION,
     SCORING_METRIC_KEYS,
+    NORMALIZATION_BASELINE_PATH,
+    NORMALIZATION_MODE,
 )
+
+# 基准集内容缓存（模块级，进程内只读一次）
+_baseline_cache = None
+
+
+def _load_baseline_levels() -> dict:
+    """加载预生成的基准集区间 {scene_level: {metric: [lo, hi]}}，失败返回空 dict。"""
+    global _baseline_cache
+    if _baseline_cache is None:
+        try:
+            with open(NORMALIZATION_BASELINE_PATH, "r", encoding="utf-8") as f:
+                _baseline_cache = json.load(f).get("scene_levels", {})
+        except (OSError, ValueError):
+            _baseline_cache = {}
+    return _baseline_cache
+
+
+def load_range_dict(scene_level: str, records: list = None) -> tuple:
+    """加载归一化区间，返回 (range_dict, source)。
+
+    source ∈ {"baseline", "batch_fallback"}：
+    - baseline：预定义基准集区间（NORMALIZATION_MODE=baseline 且文件存在），
+      跨场景/跨批次分数可比；
+    - batch_fallback：基准缺失或模式关闭时，退回当批候选 min/max（旧行为），
+      分数随候选集漂移。
+    """
+    if NORMALIZATION_MODE == "baseline":
+        levels = _load_baseline_levels()
+        scene_ranges = levels.get(scene_level)
+        if scene_ranges:
+            return dict(scene_ranges), "baseline"
+
+    if records is not None:
+        range_dict = {}
+        for metric in SCORING_METRIC_KEYS:
+            range_dict[metric] = _record_metric_range(records, metric)
+        return range_dict, "batch_fallback"
+    return {}, "batch_fallback"
 
 
 def get_weights(env: dict) -> dict:
@@ -33,8 +75,23 @@ def normalize_forward(value: float, min_value: float, max_value: float) -> float
     return float(max(0.0, min(1.0, score)))
 
 
+# 评分指标名 → 算法记录字段名（知识库/实验记录中的实际字段）
+_METRIC_RECORD_FIELDS = {
+    "time": "avg_time",
+    "path_length": "avg_path_length",
+    "stability": "stability_score",
+}
+
+
+def _record_value(record: dict, metric: str) -> float:
+    field = _METRIC_RECORD_FIELDS.get(metric, metric)
+    if field in record:
+        return float(record[field])
+    return float(record.get(metric, 0.0))
+
+
 def _record_metric_range(records: list, key: str) -> tuple:
-    vals = [r.get(key, 0.0) for r in records]
+    vals = [_record_value(r, key) for r in records]
     if not vals:
         return (0.0, 1.0)
     return (min(vals), max(vals))
@@ -97,7 +154,7 @@ def compute_score_detail(record: dict, weights: dict, range_dict: dict) -> dict:
         if metric not in weights:
             continue
         lo, hi = range_dict.get(metric, (0.0, 1.0))
-        val = float(record.get(metric, 0.0))
+        val = _record_value(record, metric)
         direction = NORMALIZATION_DIRECTION.get(metric, "forward")
         if direction == "reverse":
             sub = normalize_reverse(val, lo, hi)

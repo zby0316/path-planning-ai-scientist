@@ -8,7 +8,11 @@ from config import (
     NORMALIZATION_DIRECTION,
     SCORING_METRIC_KEYS,
 )
-from evaluation.scoring import compute_score_detail, _record_metric_range
+from evaluation.scoring import (
+    compute_score_detail,
+    load_range_dict,
+    _record_metric_range,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +43,14 @@ class AlgorithmEvaluationAgent:
         """对所有记录按 10 维指标计算加权综合得分"""
         weights = self.get_weights(env)
 
-        range_dict = {}
-        for metric in SCORING_METRIC_KEYS:
-            range_dict[metric] = _record_metric_range(records, metric)
+        # 归一化区间：优先预定义基准集（跨场景可比），缺失时回退当批 min/max
+        range_dict, norm_source = load_range_dict(
+            env.get("scene_level", ""), records=records,
+        )
+        if norm_source != "baseline":
+            range_dict = {}
+            for metric in SCORING_METRIC_KEYS:
+                range_dict[metric] = _record_metric_range(records, metric)
 
         scored = []
         for record in records:
@@ -49,6 +58,7 @@ class AlgorithmEvaluationAgent:
             new_record = record.copy()
             new_record["score"] = detail["final_score"]
             new_record["detail"] = detail
+            new_record["normalization_source"] = norm_source
             scored.append(new_record)
 
         scored.sort(key=lambda x: x["score"], reverse=True)

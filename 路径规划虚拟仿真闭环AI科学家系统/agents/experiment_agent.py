@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from agents.research_state import ResearchState
 from data.experiment_db import ExperimentDB
 from evaluation.benchmark import BenchmarkRunner
+from map.connectivity_checker import free_space_connectivity_ratio, topology_randomness
 from map.map_generator import MapGenerator
 
 logger = logging.getLogger(__name__)
@@ -124,8 +125,8 @@ class ExperimentAgent:
                     width=width,
                     height=height,
                     obstacle_ratio=obstacle_ratio,
-                    connectivity=0.5,
-                    topology_randomness=0.5,
+                    connectivity=free_space_connectivity_ratio(grid),
+                    topology_randomness=topology_randomness(grid),
                     dynamic_change_rate=dynamic_change_rate,
                 )
             except Exception as exc:
@@ -142,6 +143,7 @@ class ExperimentAgent:
                         target,
                         n_runs=n_runs,
                         compute_limit=(state.env_input or {}).get("compute_limit", "medium"),
+                        base_seed=seed,
                     )
                 else:
                     results = self.benchmark_runner.run(
@@ -150,6 +152,7 @@ class ExperimentAgent:
                         target,
                         n_runs=n_runs,
                         compute_limit=(state.env_input or {}).get("compute_limit", "medium"),
+                        base_seed=seed,
                     )
             except Exception as exc:
                 logger.error("ExperimentAgent BenchmarkRunner.run 失败 (map_idx=%s): %s", map_idx, exc, exc_info=True)
@@ -173,21 +176,12 @@ class ExperimentAgent:
                 m["dynamic_failure_frames_sum"] += int(r.get("dynamic_failure_frames", 0) or 0)
                 if succ >= 0.5:
                     m["n_success"] += 1
-                # 写 SQLite
+                # 写 SQLite（聚合行 + 逐次明细）
                 try:
-                    self.db.insert_run(
+                    self.db.record_benchmark_run(
                         map_id=map_id,
                         algorithm=algo,
-                        runtime=avg_time,
-                        path_length=avg_path,
-                        success=bool(succ >= 0.5),
-                        expanded_nodes=int(r.get("expanded_nodes", 0) or 0),
-                        turning_points=int(r.get("turning_points", 0) or 0),
-                        smoothness=float(r.get("smoothness", 0.0) or 0.0),
-                        safety_score=float(r.get("safety_score", 0.0) or 0.0),
-                        stability_score=stab,
-                        compute_cost=float(r.get("compute_cost", 0.0) or 0.0),
-                        robustness=float(r.get("robustness", 0.0) or 0.0),
+                        metrics=r,
                         parameters={
                             "obstacle_ratio": obstacle_ratio,
                             "width": width,
@@ -200,9 +194,9 @@ class ExperimentAgent:
                         seed=seed,
                     )
                 except Exception as exc:
-                    logger.error("ExperimentAgent insert_run 失败 (algo=%s, map_idx=%s): %s", algo, map_idx, exc, exc_info=True)
+                    logger.error("ExperimentAgent record_benchmark_run 失败 (algo=%s, map_idx=%s): %s", algo, map_idx, exc, exc_info=True)
                     state.metadata["errors"].append(
-                        f"ExperimentAgent insert_run 失败 (algo={algo}, map_idx={map_idx}): {exc}"
+                        f"ExperimentAgent record_benchmark_run 失败 (algo={algo}, map_idx={map_idx}): {exc}"
                     )
 
         # 汇总

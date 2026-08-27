@@ -16,6 +16,7 @@ from config import EXPERIMENTS_DIR
 from data.experiment_db import ExperimentDB
 from evaluation.benchmark import BenchmarkRunner
 from evaluation.metrics import evaluate_algorithm
+from map.connectivity_checker import free_space_connectivity_ratio, topology_randomness
 from map.map_generator import MapGenerator
 
 
@@ -24,31 +25,28 @@ SCALES = [(50, 50), (100, 100), (200, 200)]
 COMPUTE_LIMITS = ["low", "medium", "high"]
 
 
-def _make_fast_aco():
-    aco = AntColony()
-    aco.n_ants = 10
-    aco.n_iterations = 20
-    return aco.search
+def _make_fast_aco(seed=None, time_budget_s=None):
+    return AntColony(n_ants=10, n_iterations=20, seed=seed, time_budget_s=time_budget_s)
 
 
-def _make_fast_pso():
-    return ParticleSwarm(n_particles=10, n_iterations=20).search
+def _make_fast_pso(seed=None, time_budget_s=None):
+    return ParticleSwarm(n_particles=10, n_iterations=20, seed=seed, time_budget_s=time_budget_s)
 
 
-def _make_fast_sa():
-    sa = SimulatedAnnealing()
-    sa.initial_temp = 100.0
-    sa.cooling_rate = 0.9
-    sa.max_iter_per_temp = 10
-    return sa.search
+def _make_fast_sa(seed=None, time_budget_s=None):
+    return SimulatedAnnealing(
+        initial_temp=100.0, cooling_rate=0.9, max_iter_per_temp=10,
+        seed=seed, time_budget_s=time_budget_s,
+    )
 
 
+# 工厂注册表：callable(seed, time_budget_s) -> 算法实例（快速参数档）
 ALGORITHM_REGISTRY = {
-    "A*": lambda: AStar().search,
+    "A*": lambda seed, time_budget_s: AStar(time_budget_s=time_budget_s),
     "ACO": _make_fast_aco,
     "PSO": _make_fast_pso,
     "SA": _make_fast_sa,
-    "混合优化算法": lambda: HybridAlgorithm().search,
+    "混合优化算法": lambda seed, time_budget_s: HybridAlgorithm(time_budget_s=time_budget_s),
 }
 
 
@@ -112,57 +110,55 @@ class ExperimentRunner:
                 width=width,
                 height=height,
                 obstacle_ratio=obstacle_ratio,
-                connectivity=0.5,
-                topology_randomness=0.5,
+                connectivity=free_space_connectivity_ratio(grid),
+                topology_randomness=topology_randomness(grid),
                 dynamic_change_rate=dynamic_change_rate,
             )
 
-            for algo_name, algo_factory in ALGORITHM_REGISTRY.items():
-                algo_func = algo_factory()
+            for algo_index, (algo_name, algo_factory) in enumerate(ALGORITHM_REGISTRY.items()):
                 try:
                     if dynamic_change_rate > 0:
-                        frame_metrics = [
-                            evaluate_algorithm(
-                                algo_func, frame, start, target,
+                        frame_metrics = []
+                        for frame_idx, frame in enumerate(grids):
+                            m = evaluate_algorithm(
+                                algo_factory, frame, start, target,
                                 n_runs=n_runs_per_algo, compute_limit=compute_limit,
+                                base_seed=seed + frame_idx * 1000,
+                                algo_index=algo_index,
+                                algorithm_name=algo_name,
                             )
-                            for frame in grids
-                        ]
+                            for run in m.get("runs", []):
+                                run["frame_index"] = frame_idx
+                            frame_metrics.append(m)
                         metrics = BenchmarkRunner._summarize_dynamic_metrics(frame_metrics)
                         metrics["dynamic_steps"] = len(grids)
                     else:
                         metrics = evaluate_algorithm(
-                            algo_func, grid, start, target,
+                            algo_factory, grid, start, target,
                             n_runs=n_runs_per_algo, compute_limit=compute_limit,
+                            base_seed=seed, algo_index=algo_index,
+                            algorithm_name=algo_name,
                         )
                 except Exception as exc:
                     metrics = {
                         "avg_time": 0.0, "avg_path_length": 0.0, "success_rate": 0.0,
                         "stability_score": 0.0, "smoothness": 0.0, "safety_score": 0.0,
                         "expanded_nodes": 0, "turning_points": 0, "compute_cost": 0.0,
-                        "robustness": 0.0,
+                        "robustness": 0.0, "runs": [],
                     }
                     print(f"[!] {algo_name} on map {map_idx} failed: {exc}")
 
-                self.db.insert_run(
+                self.db.record_benchmark_run(
                     map_id=map_id,
                     algorithm=algo_name,
-                    runtime=metrics["avg_time"],
-                    path_length=metrics["avg_path_length"],
-                    success=bool(metrics["success_rate"] >= 0.5),
-                    expanded_nodes=metrics["expanded_nodes"],
-                    turning_points=metrics["turning_points"],
-                    smoothness=metrics["smoothness"],
-                    safety_score=metrics["safety_score"],
-                    stability_score=metrics["stability_score"],
-                    compute_cost=metrics.get("compute_cost", 0.0),
-                    robustness=metrics.get("robustness", 0.0),
+                    metrics=metrics,
                     parameters={
                         "scale": [width, height],
                         "obstacle_ratio": obstacle_ratio,
                         "compute_limit": compute_limit,
                         "dynamic_change_rate": dynamic_change_rate,
                         "dynamic_steps": len(grids),
+                        "n_runs_per_algo": n_runs_per_algo,
                     },
                     compute_limit=compute_limit,
                     seed=seed,
@@ -234,7 +230,7 @@ class ExperimentRunner:
         """快速模式：3 复杂度 × N 地图 × 5 算法（单规模 + 单算力）"""
         results = []
         t0 = time.perf_counter()
-        for obs in COMPLEXITY_LEVELS:
+        for obs_idx, obs in enumerate(COMPLEXITY_LEVELS):
             label = _complexity_label(obs)
             print(
                 f"[quick] obstacle={obs:.2f} ({label}) scale={scale} "
@@ -243,6 +239,8 @@ class ExperimentRunner:
             results.extend(
                 self._evaluate_one(
                     obs, scale, compute_limit, n_maps_per_complexity, n_runs_per_algo,
+                    # 快速模式种子基址与矩阵模式（config_idx*1000）空间隔离
+                    base_seed=500000 + obs_idx * 1000,
                     dynamic_change_rate=dynamic_change_rate,
                     dynamic_steps=dynamic_steps,
                 )

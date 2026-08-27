@@ -1,25 +1,52 @@
 # algorithms/hybrid.py — 混合优化算法（A* + 局部搜索优化）
 
+import time
+
 import numpy as np
 from algorithms.astar import AStar
 
 
 class HybridAlgorithm:
-    """A* 生成初始路径 + 局部路径平滑优化"""
+    """A* 生成初始路径 + 局部路径平滑优化
 
-    def __init__(self):
+    time_budget_s: 总搜索时间预算（秒），A* 阶段使用剩余预算，平滑阶段按同一截止时间中断
+    """
+
+    def __init__(self, smooth_iterations: int = 50, time_budget_s: float = None):
         self.astar = AStar()
-        self.smooth_iterations = 50
+        self.smooth_iterations = smooth_iterations
+        self.time_budget_s = time_budget_s
+        self._deadline = None
+
+    def _deadline_exceeded(self) -> bool:
+        return self._deadline is not None and time.perf_counter() > self._deadline
 
     def search(self, grid: np.ndarray, start: tuple, target: tuple) -> dict:
+        timeout = False
+
+        if self.time_budget_s is not None:
+            self._deadline = time.perf_counter() + self.time_budget_s
+            # A* 阶段只分配剩余时间，避免平滑阶段被挤占
+            remaining = max(self._deadline - time.perf_counter(), 0.0)
+            self.astar.time_budget_s = remaining
+
         # Phase 1: A* 快速生成初始路径
         result = self.astar.search(grid, start, target)
         if not result["success"]:
-            return result
+            return {
+                "success": False,
+                "path": [],
+                "path_length": 0,
+                "nodes_expanded": result.get("nodes_expanded", 0),
+                "timeout": result.get("timeout", False),
+            }
 
         # Phase 2: 局部平滑优化
         path = result["path"]
         for _ in range(self.smooth_iterations):
+            if self._deadline_exceeded():
+                timeout = True
+                break
             path = self._smooth(path, grid)
 
         return {
@@ -27,6 +54,7 @@ class HybridAlgorithm:
             "path": path,
             "path_length": len(path),
             "nodes_expanded": result["nodes_expanded"],
+            "timeout": timeout,
         }
 
     def _smooth(self, path: list, grid: np.ndarray) -> list:

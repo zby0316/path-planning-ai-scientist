@@ -52,11 +52,37 @@ CREATE TABLE IF NOT EXISTS hypotheses (
     validation_status TEXT,
     created_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS run_raw (
+    raw_id TEXT PRIMARY KEY,
+    run_id TEXT,
+    map_id TEXT,
+    algorithm TEXT,
+    frame_index INTEGER DEFAULT 0,
+    repeat_index INTEGER,
+    seed INTEGER,
+    time_budget_s REAL,
+    runtime_s REAL,
+    reported_success INTEGER,
+    valid_success INTEGER,
+    invalid_reason TEXT,
+    path_nodes INTEGER,
+    geometric_length REAL,
+    turning_points INTEGER,
+    safety_score REAL,
+    nodes_expanded INTEGER,
+    timeout INTEGER,
+    created_at TEXT,
+    FOREIGN KEY (map_id) REFERENCES maps (map_id)
+);
 """
 
 OPTIONAL_COLUMN_ALTERS = [
     "ALTER TABLE algorithm_runs ADD COLUMN compute_cost REAL DEFAULT 0.0",
     "ALTER TABLE algorithm_runs ADD COLUMN robustness REAL DEFAULT 0.0",
+    "ALTER TABLE algorithm_runs ADD COLUMN success_rate REAL DEFAULT -1.0",
+    "ALTER TABLE algorithm_runs ADD COLUMN reported_success_rate REAL DEFAULT -1.0",
+    "ALTER TABLE algorithm_runs ADD COLUMN timeout_rate REAL DEFAULT -1.0",
 ]
 
 
@@ -148,6 +174,9 @@ class ExperimentDB:
         compute_limit: str = "medium",
         seed: Optional[int] = None,
         run_id: Optional[str] = None,
+        success_rate: float = -1.0,
+        reported_success_rate: float = -1.0,
+        timeout_rate: float = -1.0,
     ) -> str:
         if run_id is None:
             run_id = f"run_{uuid.uuid4().hex[:12]}"
@@ -158,8 +187,8 @@ class ExperimentDB:
             (run_id, map_id, algorithm, parameters, runtime, path_length,
              success, expanded_nodes, turning_points, smoothness, safety_score,
              stability_score, compute_limit, seed, created_at,
-             compute_cost, robustness)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             compute_cost, robustness, success_rate, reported_success_rate, timeout_rate)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 run_id, map_id, algorithm, params_str, float(runtime),
@@ -168,10 +197,116 @@ class ExperimentDB:
                 float(smoothness), float(safety_score),
                 float(stability_score), compute_limit, seed, _now_iso(),
                 float(compute_cost), float(robustness),
+                float(success_rate), float(reported_success_rate), float(timeout_rate),
             ),
         )
         self.conn.commit()
         return run_id
+
+    def record_benchmark_run(
+        self,
+        map_id: str,
+        algorithm: str,
+        metrics: dict,
+        parameters: Optional[dict] = None,
+        compute_limit: str = "medium",
+        seed: Optional[int] = None,
+    ) -> str:
+        """统一落库：聚合行（algorithm_runs）+ 逐次明细行（run_raw）。
+
+        聚合值中的 success_rate / reported_success_rate / timeout_rate / avg_time
+        从 run_raw 明细重算，保证库内自洽、可追溯。
+        metrics 为 evaluate_algorithm 的返回 dict（含 runs 列表）。
+        """
+        runs = metrics.get("runs") or []
+        n_runs = len(runs)
+
+        if n_runs > 0:
+            valid_rate = sum(1 for r in runs if r.get("valid_success")) / n_runs
+            reported_rate = sum(1 for r in runs if r.get("reported_success")) / n_runs
+            timeout_rate = sum(1 for r in runs if r.get("timeout")) / n_runs
+            avg_time = float(sum(r.get("runtime_s", 0.0) for r in runs) / n_runs)
+        else:
+            valid_rate = float(metrics.get("success_rate", 0.0))
+            reported_rate = float(metrics.get("reported_success_rate", valid_rate))
+            timeout_rate = float(metrics.get("timeout_rate", 0.0))
+            avg_time = float(metrics.get("avg_time", 0.0))
+
+        run_id = self.insert_run(
+            map_id=map_id,
+            algorithm=algorithm,
+            runtime=avg_time,
+            path_length=metrics.get("avg_path_length", 0.0),
+            success=bool(valid_rate >= 0.5),
+            expanded_nodes=metrics.get("expanded_nodes", 0),
+            turning_points=metrics.get("turning_points", 0),
+            smoothness=metrics.get("smoothness", 0.0),
+            safety_score=metrics.get("safety_score", 0.0),
+            stability_score=metrics.get("stability_score", 0.0),
+            compute_cost=metrics.get("compute_cost", 0.0),
+            robustness=metrics.get("robustness", 0.0),
+            parameters=parameters,
+            compute_limit=compute_limit,
+            seed=seed,
+            success_rate=round(valid_rate, 4),
+            reported_success_rate=round(reported_rate, 4),
+            timeout_rate=round(timeout_rate, 4),
+        )
+
+        now = _now_iso()
+        for r in runs:
+            self.conn.execute(
+                """
+                INSERT INTO run_raw
+                (raw_id, run_id, map_id, algorithm, frame_index, repeat_index, seed,
+                 time_budget_s, runtime_s, reported_success, valid_success,
+                 invalid_reason, path_nodes, geometric_length, turning_points,
+                 safety_score, nodes_expanded, timeout, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"raw_{uuid.uuid4().hex[:12]}",
+                    run_id, map_id, algorithm,
+                    int(r.get("frame_index", 0)),
+                    int(r.get("run_index", 0)),
+                    int(r.get("seed", 0)) if r.get("seed") is not None else None,
+                    float(r.get("time_budget_s", 0.0) or 0.0),
+                    float(r.get("runtime_s", 0.0)),
+                    int(bool(r.get("reported_success"))),
+                    int(bool(r.get("valid_success"))),
+                    r.get("invalid_reason", "") or "",
+                    int(r.get("path_nodes", 0) or 0),
+                    float(r["geometric_length"]) if r.get("geometric_length") is not None else None,
+                    int(r.get("turning_points", 0) or 0),
+                    float(r.get("safety_score", 0.0) or 0.0),
+                    int(r.get("nodes_expanded", 0) or 0),
+                    int(bool(r.get("timeout"))),
+                    now,
+                ),
+            )
+        self.conn.commit()
+        return run_id
+
+    def query_raw_runs(
+        self,
+        map_id: Optional[str] = None,
+        algorithm: Optional[str] = None,
+        run_id: Optional[str] = None,
+    ) -> list:
+        sql = "SELECT * FROM run_raw WHERE 1=1"
+        args = []
+        if map_id is not None:
+            sql += " AND map_id = ?"
+            args.append(map_id)
+        if algorithm is not None:
+            sql += " AND algorithm = ?"
+            args.append(algorithm)
+        if run_id is not None:
+            sql += " AND run_id = ?"
+            args.append(run_id)
+        sql += " ORDER BY created_at, repeat_index"
+        cur = self.conn.execute(sql, args)
+        return [dict(r) for r in cur.fetchall()]
 
     def insert_hypothesis(
         self,
@@ -233,6 +368,7 @@ class ExperimentDB:
         total_maps = cur.execute("SELECT COUNT(*) FROM maps").fetchone()[0]
         total_runs = cur.execute("SELECT COUNT(*) FROM algorithm_runs").fetchone()[0]
         total_hypotheses = cur.execute("SELECT COUNT(*) FROM hypotheses").fetchone()[0]
+        total_raw_runs = cur.execute("SELECT COUNT(*) FROM run_raw").fetchone()[0]
 
         algo_stats = cur.execute(
             """
@@ -266,6 +402,7 @@ class ExperimentDB:
             "total_maps": total_maps,
             "total_runs": total_runs,
             "total_hypotheses": total_hypotheses,
+            "total_raw_runs": total_raw_runs,
             "algorithms": algorithms,
         }
 

@@ -39,6 +39,15 @@ class PaperRecord:
     key_facts: List[str] = field(default_factory=list)
     evidence_level: str = "paper"
     citation_bibtex: str = ""
+    # ---- 复核与溯源字段（导入流水线使用；正式 KB 条目默认 approved）----
+    abstract: str = ""
+    source_path: str = ""
+    source_sha256: str = ""
+    review_status: str = "approved"
+    in_scope: str = ""
+    reviewed_by: str = ""
+    reviewed_at: str = ""
+    reviewer_notes: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         """转换为可序列化的字典。"""

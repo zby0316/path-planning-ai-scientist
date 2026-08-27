@@ -1,8 +1,10 @@
 """受控导入 2D 栅格路径规划 Markdown 文献。
 
-默认只输出候选清单；只有显式传入 ``--write`` 才会更新
-``literature/literature_kb.json``。导入记录一律标记为待人工复核，避免 OCR
-封面文本或“规划路径”等同词异义材料直接污染正式 RAG 知识库。
+导入目标为待复核暂存区 ``literature/literature_pending.json``，与可信知识库
+``literature/literature_kb.json`` 物理分离：候选记录必须经
+``tools/review_literature.py`` 人工复核（--approve）后才会进入可信库，
+从而进入 RAG 检索范围。导入记录一律标记 ``review_status=pending``，
+避免 OCR 封面文本或"规划路径"等同词异义材料污染正式知识库。
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ WORKSPACE_DIR = PROJECT_DIR.parent
 ASSETS_DIR = Path(os.getenv("ASSETS_DIR", WORKSPACE_DIR / "assets")).resolve()
 DEFAULT_SOURCE_DIR = ASSETS_DIR / "literature" / "sources"
 DEFAULT_KB_PATH = PROJECT_DIR / "literature" / "literature_kb.json"
+DEFAULT_PENDING_PATH = PROJECT_DIR / "literature" / "literature_pending.json"
 
 PATH_PLANNING_TERMS = ("路径规划", "自主导航", "避障", "path planning")
 GRID_RELEVANCE_TERMS = (
@@ -146,26 +149,33 @@ def main() -> int:
     parser.add_argument("--source-dir", type=Path, default=DEFAULT_SOURCE_DIR)
     parser.add_argument("--kb-path", type=Path, default=DEFAULT_KB_PATH)
     parser.add_argument(
+        "--pending-path", type=Path, default=DEFAULT_PENDING_PATH,
+        help="待复核暂存区文件（--write 的写入目标）。",
+    )
+    parser.add_argument(
         "--write",
         action="store_true",
-        help="将候选记录写入知识库；省略时仅预览。",
+        help="将候选记录写入待复核暂存区；省略时仅预览。",
     )
     args = parser.parse_args()
 
     source_dir = args.source_dir.resolve()
     kb_path = args.kb_path.resolve()
+    pending_path = args.pending_path.resolve()
     if not source_dir.is_dir():
         raise SystemExit(f"文献目录不存在：{source_dir}")
 
     candidates = collect_candidates(source_dir)
     kb = load_kb(kb_path)
-    existing_hashes = {
+    pending = load_kb(pending_path)
+    # 去重：已进可信库或已在暂存区（含 rejected）的都不重复导入
+    known_hashes = {
         paper.get("source_sha256")
-        for paper in kb.get("papers", [])
+        for paper in kb.get("papers", []) + pending.get("papers", [])
         if paper.get("source_sha256")
     }
     new_records = [
-        record for record in candidates if record["source_sha256"] not in existing_hashes
+        record for record in candidates if record["source_sha256"] not in known_hashes
     ]
 
     print(f"2D 栅格候选：{len(candidates)} 篇；尚未导入：{len(new_records)} 篇")
@@ -174,16 +184,17 @@ def main() -> int:
         print(f"- {record['title']} [{algorithms}] ({record['source_path']})")
 
     if not args.write:
-        print("预览完成；未写入任何文件。人工确认后可添加 --write。")
+        print("预览完成；未写入任何文件。人工确认后可添加 --write（写入待复核暂存区）。")
         return 0
 
-    kb.setdefault("papers", []).extend(new_records)
-    kb_path.parent.mkdir(parents=True, exist_ok=True)
-    kb_path.write_text(
-        json.dumps(kb, ensure_ascii=False, indent=2) + "\n",
+    pending.setdefault("papers", []).extend(new_records)
+    pending_path.parent.mkdir(parents=True, exist_ok=True)
+    pending_path.write_text(
+        json.dumps(pending, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(f"已写入 {len(new_records)} 篇待复核记录：{kb_path}")
+    print(f"已写入 {len(new_records)} 篇待复核记录（暂存区，未进入可信库）：{pending_path}")
+    print(f"下一步：python tools/review_literature.py --checklist 生成复核清单，人工复核后 --approve/--reject。")
     return 0
 
 
