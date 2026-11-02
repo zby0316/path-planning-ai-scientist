@@ -166,6 +166,11 @@ cd ".\路径规划虚拟仿真闭环AI科学家系统"
 
 ## 相关文档
 
+- [主系统目录说明](路径规划虚拟仿真闭环AI科学家系统/README.md) — 代码与运行入口
+- [项目文档目录](docs/README.md) — 路线图、规划与报告材料
+- [已验证实验资料](evidence/validated_experiments/README.md) — 历史实验数据与适用范围
+- [报告与实验脚本](scripts/reports/README.md) — 生成、审计及检查脚本
+- [历史 Trae 归档](archive/legacy_trae/README.md) — 早期方案与 GUI 规格
 - [`docs/PROJECT_INVENTORY.md`](docs/PROJECT_INVENTORY.md) — 资产分类（核心 / 原始研究 / 最终交付 / 生成物）
 - [`docs/ROADMAP_2D_GRID_COMPETITION.md`](docs/ROADMAP_2D_GRID_COMPETITION.md) — 2D 栅格比赛建设路线图（P0–P5）
 - [`docs/ASSET_MANIFEST.md`](docs/ASSET_MANIFEST.md) — 本地资产位置与恢复校验

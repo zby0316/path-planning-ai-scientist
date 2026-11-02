@@ -1,4 +1,4 @@
-# Secrets and local configuration
+# Secrets and local configuration (keep example templates tracked)
 .env
 .env.*
 !.env.example

@@ -9,7 +9,7 @@
 | `assets/literature/` | 路径规划 PDF、CAJ 与 Markdown 原文 | 92 | 207.62 MB | `4c56f71086a65628b12b783e2d59b1ad4c244104eec5183c69d261908081b51b` |
 | `assets/reports/` | DOCX/PDF 成品、图表与最终视觉 QA | 82 | 38.71 MB | `61ae736c5ac88d960e98447156d7328c345ffe29e210259bcf03858653539707` |
 | `archive/legacy_backup/` | 历史代码快照，不作为当前主线 | 218 | 6.78 MB | `8634736ac9f464a78c2c2a77b40bcaa57c8bccbf9fa56b9b55449d0a3abbf6cf` |
-| `archive/legacy_trae/` | 根级历史 Trae 规格 | 9 | 0.06 MB | `8bfbcba960e713e29303cc91b64d158feeeda437afc224ac712416c6aaea6004` |
+| `archive/legacy_trae/` | 根级历史 Trae 规格（不含后加的 `README.md`） | 9 | 0.06 MB | `8bfbcba960e713e29303cc91b64d158feeeda437afc224ac712416c6aaea6004` |
 
 ## 跟踪边界
 
@@ -21,3 +21,4 @@
 
 迁移、备份恢复或外部硬盘挂载后，应分别计算每个目录内按相对路径排序的
 `相对路径 | 文件 SHA-256` 清单哈希，并与上表比较。文件数、总大小或清单哈希不一致时，不应删除原位置副本。
+校验 `archive/legacy_trae/` 的历史快照时，请排除后加的 `README.md`。
