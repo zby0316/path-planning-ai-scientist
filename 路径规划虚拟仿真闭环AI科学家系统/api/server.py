@@ -10,6 +10,7 @@ from collections import defaultdict
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+from starlette.concurrency import run_in_threadpool
 
 from api.schemas import (
     EnvInputRequest,
@@ -73,19 +74,22 @@ async def health_check():
 @app.post("/analyze")
 async def analyze(request: EnvInputRequest):
     try:
-        from agents.orchestrator_agent import OrchestratorAgent
-        orchestrator = OrchestratorAgent()
-        env_input = request.model_dump()
-        state = orchestrator.run(env_input)
-        result = state.to_dict()
-        result["env_input"] = env_input
-        return result
+        from agents.application_service import ApplicationService
+        env = request.model_dump()
+        grid = env.pop('grid')
+        max_iterations = env.pop('max_iterations')
+        return await run_in_threadpool(ApplicationService().run_cycle, env, grid=grid, max_iterations=max_iterations)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"分析失败: {str(exc)}")
 
 
 @app.post("/experiment", status_code=202)
 async def run_experiment(request: ExperimentRequest):
+    from config import ALLOWED_ALGORITHMS
+    if any(name not in ALLOWED_ALGORITHMS for name in request.algorithms):
+        raise HTTPException(status_code=422, detail="算法不在白名单中")
     run_id = f"exp_{uuid.uuid4().hex[:12]}"
     experiment_data = {
         "run_id": run_id,
@@ -100,33 +104,27 @@ async def run_experiment(request: ExperimentRequest):
 
     def _run_background():
         try:
-            from evaluation.experiment_runner import ExperimentRunner
-            map_params = request.map_params
-            scale = (
-                map_params.get("width", 50),
-                map_params.get("height", 50),
-            )
-            dynamic_change_rate = float(
-                map_params.get("dynamic_change_rate", request.dynamic_change_rate) or 0.0
-            )
-            dynamic_steps = int(map_params.get("dynamic_steps", 5) or 5)
-            runner = ExperimentRunner()
-            results = runner.run_quick(
-                n_maps_per_complexity=min(request.n_runs, 5),
-                scale=scale,
-                compute_limit=request.compute_limit,
-                n_runs_per_algo=max(1, request.n_runs // 2),
-                dynamic_change_rate=dynamic_change_rate,
-                dynamic_steps=dynamic_steps,
-            )
-            filtered_results = [
-                r for r in results
-                if r.get("algorithm") in request.algorithms
-            ] if request.algorithms else results
+            from agents.application_service import ApplicationService
+            params = dict(request.map_params or {})
+            env = {
+                "map_width": params.get("width", 30),
+                "map_height": params.get("height", 30),
+                "obstacle_ratio": params.get("obstacle_ratio", 0.1),
+                "random_seed": params.get("random_seed", 42),
+                "start_point": params.get("start_point"),
+                "target_point": params.get("target_point"),
+                "compute_limit": request.compute_limit,
+                "dynamic_change_rate": params.get("dynamic_change_rate", request.dynamic_change_rate),
+                "dynamic_steps": params.get("dynamic_steps", 2),
+                "optimization_preference": params.get("optimization_preference", "平衡模式"),
+            }
+            result = ApplicationService().run_cycle(env, grid=params.get('grid'), n_runs=request.n_runs,
+                                                    max_iterations=int(params.get('max_iterations', 1)))
+            result["requested_algorithms"] = request.algorithms
             with experiment_lock:
-                experiment_store[run_id]["status"] = "completed"
+                experiment_store[run_id]["status"] = result["status"]
                 experiment_store[run_id]["progress"] = 1.0
-                experiment_store[run_id]["results"] = filtered_results
+                experiment_store[run_id]["results"] = result
         except Exception as exc:
             with experiment_lock:
                 experiment_store[run_id]["status"] = "failed"
@@ -164,45 +162,17 @@ async def get_report(run_id: str):
     with experiment_lock:
         data = experiment_store.get(run_id)
     if data is None:
+        from data.experiment_db import ExperimentDB
+        with ExperimentDB() as db:
+            saved = db.get_research_cycle(run_id)
+        if saved and saved.get('report'):
+            return saved['report']
         raise HTTPException(status_code=404, detail=f"报告 {run_id} 未找到")
 
-    try:
-        from agents.research_state import ResearchState
-        from reports.report_generator import ReportGenerator
-        results = data.get("results") or []
-        request_data = data.get("request", {})
-        env_input = dict(request_data.get("map_params", {}) or {})
-        env_input.setdefault("dynamic_change_rate", request_data.get("dynamic_change_rate", 0.0))
-        env_input.setdefault("compute_limit", request_data.get("compute_limit", "medium"))
-        if isinstance(results, list):
-            best = max(results, key=lambda r: r.get("success_rate", 0), default={})
-            experiment_results = results
-        elif isinstance(results, dict):
-            best = results
-            experiment_results = [results]
-        else:
-            best = {}
-            experiment_results = []
-        state = ResearchState(
-            env_input=env_input,
-            decision={"best_algorithm": best.get("algorithm", best.get("best_algorithm", "N/A"))},
-            experiment_results=experiment_results,
-        )
-        report_gen = ReportGenerator(state)
-        report = report_gen.generate()
-        return report
-    except Exception:
-        import json as _json
-        results = data.get("results") or {}
-        report_lines = [
-            f"# 实验报告 - {run_id}",
-            f"",
-            f"**状态**: {data.get('status', 'N/A')}",
-            f"**创建时间**: {data.get('created_at', 'N/A')}",
-            f"",
-            f"## 结果",
-            f"```json",
-            _json.dumps(results, ensure_ascii=False, indent=2),
-            f"```",
-        ]
-        return "\n".join(report_lines)
+    if data.get("status") == "running":
+        raise HTTPException(status_code=409, detail="实验尚未完成")
+    result = data.get("results")
+    if isinstance(result, dict) and result.get("report"):
+        return result["report"]
+
+    raise HTTPException(status_code=409, detail=f"实验未产生报告：{result}")

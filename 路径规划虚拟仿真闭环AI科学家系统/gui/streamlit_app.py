@@ -119,84 +119,43 @@ def execute_decision_pipeline_v2(map_width, map_height, obstacle_ratio, connecti
                                   topology_randomness, compute_limit, random_seed,
                                   start_x, start_y, target_x, target_y,
                                   dynamic_change_rate, optimization_preference,
-                                  grid_from_file=None):
+                                  grid_from_file=None, max_iterations=1):
     """执行一次完整的多智能体分析流水线（V2：支持文件上传和优化偏好）"""
-    env_input = {
-        "obstacle_ratio": obstacle_ratio,
-        "map_width": map_width,
-        "map_height": map_height,
-        "connectivity": connectivity,
-        "topology_randomness": topology_randomness,
-        "compute_limit": compute_limit,
-        "start_point": [start_x, start_y],
-        "target_point": [target_x, target_y],
-        "dynamic_change_rate": dynamic_change_rate,
-        "optimization_preference": optimization_preference,
-        "random_seed": random_seed,
-    }
-    st.session_state.env_input = env_input
-
-    if grid_from_file is not None:
-        grid = grid_from_file
-        st.session_state.grid = grid
-    else:
-        gen = MapGenerator(seed=random_seed)
-        grid = gen.generate(map_width, map_height, obstacle_ratio,
-                             (start_x, start_y), (target_x, target_y))
-        st.session_state.grid = grid
+    from agents.application_service import ApplicationService
+    from map.map_analyzer import MapAnalyzer
+    from gui.visualization import _wrap_hypothesis_to_dict
+    env = {"map_width": map_width, "map_height": map_height,
+           "obstacle_ratio": obstacle_ratio, "compute_limit": compute_limit,
+           "start_point": [start_x, start_y], "target_point": [target_x, target_y],
+           "random_seed": random_seed, "dynamic_change_rate": dynamic_change_rate,
+           "max_iterations": max_iterations,
+           "optimization_preference": optimization_preference,
+           "human_feedback": st.session_state.get("pending_human_feedback", ""),
+           "previous_decision": st.session_state.get('decision') if st.session_state.get('pending_human_review') else None,
+           "previous_cycle_id": (st.session_state.get('research_result') or {}).get('cycle_id') if st.session_state.get('pending_human_review') else None}
+    grid = grid_from_file if grid_from_file is not None else MapGenerator(seed=random_seed).generate(
+        map_width, map_height, obstacle_ratio, (start_x, start_y), (target_x, target_y))
+    result = ApplicationService().run_cycle(env, grid=grid, max_iterations=max_iterations)
+    if result['decision']['best_algorithm'] is None:
+        raise ValueError('实验依据不足，无法生成最终推荐')
+    previous = st.session_state.get('decision')
+    st.session_state.research_result = result
+    st.session_state.pop('optional_llm_explanation', None)
+    st.session_state.pending_human_feedback = ''
+    st.session_state.pending_human_review = False
+    st.session_state.previous_decision = previous
+    st.session_state.env_input = result['env_input']
+    st.session_state.grid = grid
     st.session_state.start = (start_x, start_y)
     st.session_state.target = (target_x, target_y)
-
-    checker = ConnectivityChecker()
-    if not checker.is_reachable(grid, (start_x, start_y), (target_x, target_y)):
-        if grid_from_file is not None:
-            pass
-        else:
-            gen_fallback = MapGenerator(seed=random_seed)
-            for _ in range(5):
-                grid = gen_fallback.generate(map_width, map_height, obstacle_ratio,
-                                              (start_x, start_y), (target_x, target_y))
-                if checker.is_reachable(grid, (start_x, start_y), (target_x, target_y)):
-                    break
-            st.session_state.grid = grid
-
-    benchmark = BenchmarkRunner()
-    benchmark_results = benchmark.run(grid, (start_x, start_y),
-                                       (target_x, target_y), n_runs=3,
-                                       compute_limit=compute_limit,
-                                       base_seed=random_seed)
-    st.session_state.benchmark_results = benchmark_results
-
-    system = PathPlanningDecisionSystem()
-    decision = system.decide(env_input)
-    st.session_state.decision = decision
-
-    try:
-        from map.map_analyzer import MapAnalyzer
-        analyzer = MapAnalyzer()
-        features = analyzer.analyze(grid, (start_x, start_y), (target_x, target_y),
-                                     connectivity=connectivity,
-                                     topology_randomness=topology_randomness,
-                                     dynamic_change_rate=dynamic_change_rate)
-        st.session_state.features = features
-    except ImportError:
-        st.session_state.features = {"scene_level": decision.get("scene_level", "unknown")}
-
-    try:
-        from agents.parameter_agent import ParameterAgent
-        param_agent = ParameterAgent()
-        st.session_state.params = param_agent.recommend(env_input, decision)
-    except ImportError:
-        st.session_state.params = None
-
-    explanation_agent = ExplanationAgent(use_qwen=True)
-    explanation = explanation_agent.explain(env_input, decision)
-    hypo_agent = HypothesisAgent(use_qwen=True)
-    hypothesis_text = hypo_agent.generate(env_input, decision, explanation["explanation_text"])
-    from gui.visualization import _wrap_hypothesis_to_dict
-    st.session_state.hypothesis = _wrap_hypothesis_to_dict(hypothesis_text)
-
-
+    st.session_state.benchmark_results = result['experiment_results']
+    st.session_state.decision = result['decision']
+    st.session_state.features = MapAnalyzer().analyze(grid, (start_x, start_y), (target_x, target_y),
+        connectivity=result['env_input']['connectivity'], topology_randomness=result['env_input']['topology_randomness'])
+    from agents.parameter_agent import ParameterAgent
+    st.session_state.params = ParameterAgent().recommend(result['env_input'], result['decision'])
+    st.session_state.hypothesis = _wrap_hypothesis_to_dict(result['hypothesis']['hypothesis_text'])
+    return
 def apply_template(preset_name):
     template_presets = {
         "低障碍(15%)": {"obstacle_ratio": 0.15, "connectivity": 0.80, "topology_randomness": 0.30},
@@ -345,6 +304,7 @@ def main():
                 target_y = st.number_input("终点 Y", 0, map_height - 1, map_height - 1)
                 dynamic_change_rate = st.slider("动态变化率", 0.0, 1.0, 0.0, 0.01, help="非零时模拟动态障碍物环境")
                 random_seed = st.number_input("随机种子", 0, 9999, 42)
+                max_iterations = st.number_input("最大验证轮数", 1, 3, 1, help="快速演示为 1；多轮在假设被反驳时运行，可能超过 60 秒。")
 
             run_btn = st.button("▶ 开始多智能体分析", type="primary", use_container_width=True)
             regenerate_btn = st.button("🔄 重新生成地图", use_container_width=True)
@@ -367,23 +327,19 @@ def main():
                 st.session_state.target = (target_x, target_y)
 
             if run_btn:
-                with st.spinner("🧠 多智能体系统正在分析..."):
-                    if st.session_state.uploaded_grid is not None:
+                try:
+                    with st.spinner("🧠 多智能体系统正在分析..."):
                         execute_decision_pipeline_v2(
                             map_width, map_height, obstacle_ratio, connectivity,
                             topology_randomness, compute_limit, random_seed,
                             start_x, start_y, target_x, target_y,
                             dynamic_change_rate, optimization_preference,
                             grid_from_file=st.session_state.uploaded_grid,
+                            max_iterations=max_iterations,
                         )
-                    else:
-                        execute_decision_pipeline_v2(
-                            map_width, map_height, obstacle_ratio, connectivity,
-                            topology_randomness, compute_limit, random_seed,
-                            start_x, start_y, target_x, target_y,
-                            dynamic_change_rate, optimization_preference,
-                            grid_from_file=None,
-                        )
+                except (ValueError, RuntimeError) as exc:
+                    st.error(f"本次分析未完成：{exc}。请调整地图或参数后重试。")
+                    st.stop()
                 st.success("✅ 分析完成！")
                 st.rerun()
 
@@ -519,17 +475,23 @@ def main():
 
             st.divider()
 
-            st.subheader("📊 推荐算法 10 维指标评分")
+            st.subheader("📊 推荐算法 9 项指标与规则惩罚")
             top_detail = decision["ranking"][0].get("detail", {}) if decision.get("ranking") else {}
             fig_10d_bar = draw_10d_bar(top_detail)
             st.plotly_chart(fig_10d_bar, key="chart_10d_bar", use_container_width=True)
 
-            st.subheader("🎯 五算法 10 维雷达对比")
+            st.subheader("🎯 候选算法 9 维雷达对比")
             fig_10d_radar = draw_10d_radar(decision["ranking"])
             st.plotly_chart(fig_10d_radar, key="chart_10d_radar", use_container_width=True)
 
             if st.session_state.benchmark_results:
                 st.subheader("📋 Benchmark 实际运行结果对比")
+                research_result = st.session_state.get('research_result')
+                if research_result:
+                    st.info(research_result['decision']['change_reason'])
+                    st.caption('离线模式；假设只针对当前地图，跨地图结论尚未验证。')
+                    st.json({'weights': research_result['weights'], 'hypothesis_supported': research_result['hypothesis_supported'],
+                             'map_id': research_result['map_id'], 'reflection': research_result['reflection']})
                 import pandas as pd
                 table_data = []
                 for r in st.session_state.benchmark_results:
@@ -561,10 +523,10 @@ def main():
 
             with col_bottom_left:
                 st.subheader("🎯 多指标雷达图")
-                radar_dim = st.radio("雷达维度", ["4 维", "10 维"],
+                radar_dim = st.radio("雷达维度", ["4 维", "9 维"],
                                       horizontal=True, key="radar_dim",
                                       label_visibility="collapsed")
-                if radar_dim == "10 维":
+                if radar_dim == "9 维":
                     fig_radar = draw_extended_radar(decision["ranking"])
                 else:
                     fig_radar = draw_radar(decision["ranking"])
@@ -606,21 +568,38 @@ def main():
                     st.metric(label, f"{value:.4f}")
 
                 st.divider()
-                st.subheader("💬 DeepSeek 解释")
+                st.subheader("💬 决策依据")
                 env_input = st.session_state.env_input
-                explanation_agent = ExplanationAgent(use_qwen=True)
-                explanation = explanation_agent.explain(env_input, decision)
-                st.info(explanation["explanation_text"])
+                st.info(decision.get("change_reason", "暂无决策依据"))
+                if st.button("生成大模型解释（可选）", key="optional_llm_button"):
+                    try:
+                        with st.spinner("正在生成解释，联网耗时不计入离线实验时间……"):
+                            explanation_agent = ExplanationAgent(use_qwen=True)
+                            explanation = explanation_agent.explain(env_input, decision)
+                        st.session_state.optional_llm_explanation = {
+                            'text': explanation['explanation_text'],
+                            'provider': explanation_agent.client.provider,
+                        }
+                    except Exception as exc:
+                        st.warning(f"大模型解释不可用（{type(exc).__name__}）；保留离线决策依据。")
+                optional_explanation = st.session_state.get('optional_llm_explanation')
+                if optional_explanation:
+                    st.caption(f"大模型解释：{optional_explanation['provider']}；未参与评分，内容需人工核验。")
+                    st.info(optional_explanation['text'])
 
             with col_right:
                 if "all_expanded" not in st.session_state:
                     st.session_state.all_expanded = False
 
-                st.subheader("🧠 多智能体推理链（增强版：含置信度与 I/O 详情）")
-                render_enhanced_reasoning_chain(decision)
+                st.subheader("🧠 实际证据链")
+                research = st.session_state.get('research_result') or {}
+                st.json({"先验排名": research.get('prior_ranking', []),
+                         "实验记录": [r.get('run_id') for r in research.get('experiment_results', [])],
+                         "假设": research.get('hypothesis'), "迭代": research.get('iterations', []),
+                         "反思": research.get('reflection'), "降级状态": research.get('degraded')})
 
                 st.divider()
-                st.subheader("⚙ 推荐算法参数")
+                st.subheader("⚙ 建议参数（尚未用于当前实验）")
                 if st.session_state.params:
                     import json
                     st.code(json.dumps(st.session_state.params, ensure_ascii=False, indent=2), language="json")
@@ -657,7 +636,8 @@ def main():
                     )
                     feedback = st.text_area("质疑结论（输入您的反馈意见）", placeholder="例如：我认为在当前场景下应该优先考虑成功率...", key="human_loop_feedback")
                     if st.button("🔄 提交反馈并重新分析", type="primary", use_container_width=True):
-                        st.session_state.env_input["human_feedback"] = feedback
+                        st.session_state.pending_human_feedback = feedback
+                        st.session_state.pending_human_review = True
                         st.session_state.env_input["optimization_preference"] = new_preference
                         with st.spinner("🔄 正在基于您的反馈重新分析..."):
                             mw = env_input.get("map_width", DEFAULT_MAP_WIDTH)
@@ -676,7 +656,8 @@ def main():
                                 tp[1] if isinstance(tp, list) else mh - 1,
                                 env_input.get("dynamic_change_rate", 0.0),
                                 new_preference,
-                                grid_from_file=st.session_state.get("uploaded_grid"),
+                                grid_from_file=st.session_state.get("grid"),
+                                max_iterations=env_input.get("max_iterations", 1),
                             )
                         st.rerun()
 
@@ -726,7 +707,8 @@ def main():
             exp_col1, exp_col2, exp_col3, exp_col4 = st.columns(4)
 
             with exp_col1:
-                full_report = generate_markdown_report(hypothesis, decision, env_input)
+                result = st.session_state.get('research_result')
+                full_report = result['report'] if result else generate_markdown_report(hypothesis, decision, env_input)
                 st.download_button(
                     "📥 导出 Markdown 报告",
                     data=full_report,

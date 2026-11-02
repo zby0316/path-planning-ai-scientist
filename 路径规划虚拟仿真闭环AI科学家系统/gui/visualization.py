@@ -275,16 +275,16 @@ def draw_animated_bar_chart(ranking, metrics: list = None):
 
 
 def draw_extended_radar(ranking, metrics_10: list = None):
-    """10 维扩展雷达对比图。"""
+    """九项评分指标雷达图，不把惩罚或重复字段作为维度。"""
     if metrics_10 is None:
         metrics_10 = [
             "time_score", "length_score", "success_score", "stability_score",
-            "smoothness_score", "safety_score", "expanded_nodes_score",
-            "compute_cost_score", "robustness_score", "path_length_score",
+            "smoothness_score", "safety_score_score", "expanded_nodes_score",
+            "compute_cost_score", "robustness_score",
         ]
     labels = [
         "耗时", "路径长度", "成功率", "稳定性", "平滑度",
-        "安全性", "搜索效率", "计算代价", "鲁棒性", "路径长度2",
+        "安全性", "搜索效率", "计算代价", "鲁棒性",
     ]
     colors = ["#2ecc71", "#3498db", "#e74c3c", "#f39c12", "#9b59b6"]
     fig = go.Figure()
@@ -303,7 +303,7 @@ def draw_extended_radar(ranking, metrics_10: list = None):
         ))
     fig.update_layout(
         polar=dict(radialaxis=dict(range=[0, 1], visible=True)),
-        title="10 维扩展雷达对比",
+        title="9 维扩展雷达对比",
         height=500,
     )
     return fig
@@ -581,7 +581,7 @@ def draw_scene_indicator(scene_level: str, complexity: float):
 def draw_10d_bar(detail: dict):
     keys = [
         "time_score", "length_score", "success_score", "stability_score",
-        "smoothness_score", "safety_score", "expanded_nodes_score",
+        "smoothness_score", "safety_score_score", "expanded_nodes_score",
         "compute_cost_score", "robustness_score", "penalty",
     ]
     labels = [
@@ -594,7 +594,7 @@ def draw_10d_bar(detail: dict):
         if k == "penalty":
             if v == 0:
                 colors.append("#2ecc71")
-            elif v > -0.1:
+            elif v < 0.1:
                 colors.append("#f39c12")
             else:
                 colors.append("#e74c3c")
@@ -610,7 +610,7 @@ def draw_10d_bar(detail: dict):
         go.Bar(x=labels, y=values, marker_color=colors, text=[f"{v:.3f}" for v in values], textposition="outside")
     )
     fig.update_layout(
-        title="推荐算法 10 维指标评分分解",
+        title="推荐算法 9 项指标与惩罚分解",
         xaxis_title="指标维度",
         yaxis_title="评分",
         yaxis=dict(range=[-1.1, 1.1]) if any(v < 0 for v in values) else dict(range=[0, 1.1]),
@@ -623,12 +623,12 @@ def draw_10d_bar(detail: dict):
 def draw_10d_radar(ranking: list):
     keys = [
         "time_score", "length_score", "success_score", "stability_score",
-        "smoothness_score", "safety_score", "expanded_nodes_score",
-        "compute_cost_score", "robustness_score", "penalty",
+        "smoothness_score", "safety_score_score", "expanded_nodes_score",
+        "compute_cost_score", "robustness_score",
     ]
     labels = [
         "耗时", "路径长度", "成功率", "稳定性", "平滑度",
-        "安全得分", "扩展节点", "计算开销", "鲁棒性", "惩罚项",
+        "安全得分", "扩展节点", "计算开销", "鲁棒性",
     ]
     colors = ["#2ecc71", "#3498db", "#e74c3c", "#f39c12", "#9b59b6"]
 
@@ -649,8 +649,8 @@ def draw_10d_radar(ranking: list):
         )
 
     fig.update_layout(
-        title="五算法 10 维雷达对比",
-        polar=dict(radialaxis=dict(visible=True, range=[-1.1, 1.1])),
+        title="候选算法 9 维雷达对比",
+        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
         height=550,
         margin=dict(l=60, r=60, t=60, b=40),
     )

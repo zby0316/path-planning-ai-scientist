@@ -83,9 +83,10 @@ def _robustness(
     rng = np.random.RandomState(seed)
     free_indices = np.argwhere(grid == 0)
     if len(free_indices) == 0:
-        return 0.0
+        return 0.0, []
 
     successes = 0
+    runs = []
     perturb_count = max(1, int(len(free_indices) * perturb_ratio))
     for perturb_idx in range(n_perturbations):
         perturbed = grid.copy()
@@ -94,15 +95,20 @@ def _robustness(
             y, x = free_indices[idx]
             if (x, y) != start and (x, y) != target:
                 perturbed[y, x] = 1
+        run_seed = _run_seed(seed, 99, perturb_idx)
+        t_start = time.perf_counter()
+        error = ''
         try:
             algo = algorithm_factory(
-                seed=_run_seed(seed, 99, perturb_idx),
+                seed=run_seed,
                 time_budget_s=time_budget_s,
             )
             result = algo.search(perturbed, start, target)
-        except Exception:
+        except Exception as exc:
+            error = f'exception:{type(exc).__name__}'
             result = {"success": False}
-        valid, _, _ = validate_path(
+        elapsed = time.perf_counter() - t_start
+        valid, reason, _ = validate_path(
             perturbed,
             result.get("path", []) or [],
             start,
@@ -111,8 +117,15 @@ def _robustness(
         )
         if result.get("success", False) and valid:
             successes += 1
+        runs.append({'perturb_index': perturb_idx, 'perturbation_seed': seed,
+                     'seed': run_seed, 'runtime_s': elapsed,
+                     'reported_success': bool(result.get('success', False)),
+                     'valid_success': bool(result.get('success', False) and valid),
+                     'invalid_reason': error or reason,
+                     'timeout': bool(result.get('timeout', False)),
+                     'perturb_ratio': perturb_ratio, 'time_budget_s': time_budget_s})
 
-    return round(successes / n_perturbations, 4)
+    return round(successes / n_perturbations, 4), runs
 
 
 def evaluate_algorithm(
@@ -218,15 +231,15 @@ def evaluate_algorithm(
     compute_cost = _compute_cost(avg_expanded)
 
     try:
-        robustness = _robustness(
+        robustness, robustness_runs = _robustness(
             algorithm_factory, grid, start, target,
             algorithm_name=algorithm_name,
             n_perturbations=3, perturb_ratio=0.05,
             seed=_run_seed(base_seed, algo_index, 99),
             time_budget_s=time_budget_s,
         )
-    except Exception:
-        robustness = success_rate
+    except Exception as exc:
+        raise RuntimeError('鲁棒性实验未完成') from exc
 
     return {
         "avg_time": round(avg_time, 4),
@@ -243,4 +256,5 @@ def evaluate_algorithm(
         "robustness": robustness,
         "n_runs": n_runs,
         "runs": runs,
+        "robustness_runs": robustness_runs,
     }

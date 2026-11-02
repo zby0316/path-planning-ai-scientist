@@ -92,6 +92,10 @@ class BenchmarkRunner:
                     time_budget_s=time_budget_s,
                     algorithm_name=name,
                 )
+                for run in metrics.get("runs", []):
+                    run["frame_index"] = frame_idx
+                for run in metrics.get("robustness_runs", []):
+                    run["frame_index"] = frame_idx
                 frame_metrics.append(metrics)
 
             summary = self._summarize_dynamic_metrics(frame_metrics)
@@ -130,9 +134,12 @@ class BenchmarkRunner:
             1 for m in frame_metrics if float(m.get("success_rate", 0.0) or 0.0) < 0.5
         )
         all_runs = [run for m in frame_metrics for run in m.get("runs", [])]
+        robustness_runs = [run for m in frame_metrics for run in m.get("robustness_runs", [])]
+        valid_lengths = [float(run["geometric_length"]) for run in all_runs
+                         if run.get("valid_success") and run.get("geometric_length") is not None]
         return {
             "avg_time": round(_mean("avg_time"), 4),
-            "avg_path_length": round(_mean("avg_path_length"), 1),
+            "avg_path_length": round(sum(valid_lengths) / len(valid_lengths), 1) if valid_lengths else 0.0,
             "success_rate": round(_mean("success_rate"), 2),
             "reported_success_rate": round(_mean("reported_success_rate"), 2),
             "timeout_rate": round(_mean("timeout_rate"), 2),
@@ -145,6 +152,7 @@ class BenchmarkRunner:
             "robustness": round(_mean("robustness"), 4),
             "dynamic_failure_frames": failure_frames,
             "runs": all_runs,
+            "robustness_runs": robustness_runs,
         }
 
     def save(self, results: list, filepath: str):

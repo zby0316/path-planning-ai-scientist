@@ -32,6 +32,14 @@ class PathPlanningDecisionSystem:
 
 def main():
     """Phase 1 验证：使用三组测试数据验证决策输出"""
+    import sys
+    if "--full" in sys.argv:
+        import json
+        from agents.application_service import ApplicationService
+        result = ApplicationService().run_cycle({"map_width": 30, "map_height": 30,
+            "obstacle_ratio": 0.10, "compute_limit": "medium", "random_seed": 42})
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return
     test_cases = [
         {
             "name": "低复杂度场景",

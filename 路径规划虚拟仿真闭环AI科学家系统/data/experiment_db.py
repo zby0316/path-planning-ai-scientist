@@ -4,7 +4,7 @@ import json
 import os
 import sqlite3
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from config import EXPERIMENTS_DIR, HISTORICAL_RESULTS_PATH
@@ -53,6 +53,33 @@ CREATE TABLE IF NOT EXISTS hypotheses (
     created_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS research_cycles (
+    cycle_id TEXT PRIMARY KEY,
+    map_id TEXT,
+    status TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS map_grids (
+    map_id TEXT PRIMARY KEY,
+    height INTEGER NOT NULL,
+    width INTEGER NOT NULL,
+    cells BLOB NOT NULL,
+    FOREIGN KEY (map_id) REFERENCES maps (map_id)
+);
+
+CREATE TABLE IF NOT EXISTS robustness_raw (
+    raw_id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    map_id TEXT NOT NULL,
+    algorithm TEXT NOT NULL,
+    frame_index INTEGER NOT NULL,
+    perturb_index INTEGER NOT NULL,
+    details_json TEXT NOT NULL,
+    FOREIGN KEY (run_id) REFERENCES algorithm_runs (run_id)
+);
+
 CREATE TABLE IF NOT EXISTS run_raw (
     raw_id TEXT PRIMARY KEY,
     run_id TEXT,
@@ -87,7 +114,7 @@ OPTIONAL_COLUMN_ALTERS = [
 
 
 def _now_iso() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 class ExperimentDB:
@@ -120,6 +147,29 @@ class ExperimentDB:
 
     def close(self) -> None:
         self.conn.close()
+
+    def save_research_cycle(self, cycle_id: str, map_id: str, status: str, result: dict) -> None:
+        self.conn.execute(
+            "INSERT INTO research_cycles (cycle_id, map_id, status, result_json, created_at) VALUES (?, ?, ?, ?, ?)",
+            (cycle_id, map_id, status, json.dumps(result, ensure_ascii=False), _now_iso()),
+        )
+        self.conn.commit()
+
+    def get_research_cycle(self, cycle_id: str) -> Optional[dict]:
+        row = self.conn.execute("SELECT result_json FROM research_cycles WHERE cycle_id = ?", (cycle_id,)).fetchone()
+        return json.loads(row["result_json"]) if row else None
+
+    def save_map_grid(self, map_id: str, grid) -> None:
+        import numpy as np
+        grid = np.asarray(grid, dtype=np.uint8)
+        self.conn.execute("INSERT INTO map_grids (map_id, height, width, cells) VALUES (?, ?, ?, ?)",
+                          (map_id, grid.shape[0], grid.shape[1], grid.tobytes()))
+        self.conn.commit()
+
+    def get_map_grid(self, map_id: str):
+        import numpy as np
+        row = self.conn.execute("SELECT height, width, cells FROM map_grids WHERE map_id = ?", (map_id,)).fetchone()
+        return np.frombuffer(row['cells'], dtype=np.uint8).reshape(row['height'], row['width']).copy() if row else None
 
     def __enter__(self):
         return self
@@ -283,6 +333,13 @@ class ExperimentDB:
                     int(bool(r.get("timeout"))),
                     now,
                 ),
+            )
+        for r in metrics.get('robustness_runs', []):
+            self.conn.execute(
+                "INSERT INTO robustness_raw (raw_id, run_id, map_id, algorithm, frame_index, perturb_index, details_json) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (f"rob_{uuid.uuid4().hex[:12]}", run_id, map_id, algorithm,
+                 int(r.get('frame_index', 0)), int(r.get('perturb_index', 0)),
+                 json.dumps(r, ensure_ascii=False)),
             )
         self.conn.commit()
         return run_id

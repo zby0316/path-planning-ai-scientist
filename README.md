@@ -1,6 +1,6 @@
 # 路径规划虚拟仿真闭环 AI 科学家系统
 
-以 Qwen 大模型为核心的多智能体"AI 科学家"系统，解决 **2D 栅格地图路径规划算法的自适应选型**问题。系统不仅选择算法，更构建了一条完整的科学发现闭环：从地图输入到环境分析、文献检索、五算法统一实验、数据驱动选型、科学假设生成、实验验证、反思修正，最终输出可追溯的研究报告。
+面向 **2D 栅格地图路径规划算法自适应选型**的虚拟仿真系统。统一核心流程以历史画像提出候选，在当前地图上运行五算法，对照实验结果评分、检验候选假设并记录反思；可导出包含运行记录的报告。核心流程默认离线；GUI 可单独请求联网大模型解释，该解释不参与评分且需人工核验，文献检索尚未接入统一核心流程。
 
 本仓库的唯一开发主线是 [`路径规划虚拟仿真闭环AI科学家系统/`](路径规划虚拟仿真闭环AI科学家系统/)。
 近期目标是完成可复现、可解释、可演示的 **2D 栅格地图比赛版闭环**。
@@ -8,9 +8,9 @@
 ## 核心特性
 
 - **可复现**：统一随机种子、超时与重复次数，实验结果可复核；每图×算法×重复的种子确定性派生，元启发式算法内部 RNG 全部受种子控制
-- **可解释**：LLM 生成选型依据 + 推理链可视化
+- **可解释**：显示历史先验、实验记录、评分权重及候选变化原因
 - **可证伪**：假设含变量/对照/阈值/否证条件/实验计划
-- **可追溯**：每条外部结论定位到文献，每条系统结论定位到实验记录；逐次原始运行（run_raw）入库，聚合值可由明细重算
+- **可追溯**：逐次原始运行（run_raw）及研究周期入库，报告关联运行 ID；文献知识库需要独立核验
 - **诚实失败**：独立路径校验（起终点/邻接/碰撞/越界）区分"算法自报成功"与"校验后成功"；时间预算超时如实标记 timeout
 - **离线降级**：无 Qwen API 时实验与选型仍可运行（规则路径兜底）
 
@@ -21,6 +21,7 @@
 | 种子贯通 | 每次运行种子 = base_seed + algo_index×100 + run_idx，地图生成与算法内部 RNG 均受控 |
 | 时间预算 | `RUNTIME_BUDGET_S`（low=0.05s / medium=0.5s / high=2.0s，可 env 覆盖），超时协作式中断并打 `timeout` 标记 |
 | 逐次原始运行 | `run_raw` 表保存每次运行的种子/耗时/双轨成功/校验原因/几何长度，聚合行与明细自洽 |
+| 扰动实验记录 | `robustness_raw` 保存鲁棒性扰动的帧、种子、超时与校验结果；`map_grids` 保存输入栅格 |
 | 独立路径校验 | `evaluation/path_validator.py`：Bresenham 逐段碰撞检查，产出 reported/valid_success 双轨 |
 | 基准集归一化 | `tools/build_normalization_baseline.py` 预生成各场景等级九维指标区间，评分跨场景可比（缺失时自动降级当批 min/max 并标注） |
 | 文献受控导入 | 候选先入 `literature/literature_pending.json` 暂存区，经 `tools/review_literature.py` 人工复核后才进可信库与 RAG 检索 |
@@ -101,7 +102,7 @@
 
 | 入口 | 文件 | 说明 |
 |---|---|---|
-| CLI | `main.py` | `PathPlanningDecisionSystem`，串联 6 个核心智能体，跑测试场景 |
+| CLI | `main.py --full` | 统一服务离线快速演示；无参数为历史六智能体示例 |
 | Web GUI | `gui/streamlit_app.py` | 4 标签页：地图参数 / 环境分析 / 智能体推理 / 研究报告 |
 | REST API | `api/server.py` | FastAPI，含 `/analyze`、`/experiment`、`/report/{id}`、`/health` |
 
@@ -117,7 +118,7 @@
 | FactExtractionAgent | `fact_extraction_agent.py` | Qwen 抽取文献事实（confidence/evidence_type） |
 | KnowledgeRetrievalAgent | `knowledge_agent.py` | SQLite 历史实验聚合查询 |
 | RuleConstraintAgent | `rule_agent.py` | 4 条硬规则惩罚（算力/复杂度/连通性） |
-| AlgorithmEvaluationAgent | `evaluation_agent.py` | 10 维指标归一化加权评分 |
+| AlgorithmEvaluationAgent | `evaluation_agent.py` | 9 项指标归一化加权评分 |
 | DecisionAgent | `decision_agent.py` | 选型决策（best/ranking/scene_level） |
 | ParameterAgent | `parameter_agent.py` | 按算力等级缩放推荐运行参数 |
 | HumanLoopAgent | `human_loop_agent.py` | 7 条触发条件判定人工复核 |
@@ -130,11 +131,9 @@
 | Pipeline | `pipeline.py` | `ScientificDiscoveryPipeline`，假设-验证-反思闭环 |
 | ResearchState | `research_state.py` | 统一快照数据类（env → report 全字段） |
 
-### 三层编排
+### 编排与兼容
 
-1. **OrchestratorAgent**（Phase 4）：实例化全部智能体，按 spec 顺序串联，每步 `_safe_step` 容错，失败记入 `metadata["errors"]` 不中断后续步骤
-2. **ScientificDiscoveryPipeline**（Phase 5）：`run_full_cycle` → orchestrator → 迭代（Hypothesis → Experiment → Reflection），`confidence_score ≥ 0.7` 收敛，默认最多 3 轮
-3. **ResearchState**：统一快照数据类，字段覆盖 `env_input → map_features → literature_facts → algorithm_records → scored_algorithms → decision → recommended_params → hypothesis → experiment_results → reflection → report`
+`ApplicationService.run_cycle` 是当前实验与选型的统一入口；`ScientificDiscoveryPipeline.run_full_cycle` 是返回 `ResearchState` 的兼容包装。假设被反驳时可使用新的算法种子验证修订候选，最多三轮，记录每轮的实验 ID 和停止原因。旧 `OrchestratorAgent` 与无参数 CLI 仍可用于历史接口，不代表新主链执行记录。规则判断不是统计置信度。
 
 ## 算法白名单
 
@@ -142,8 +141,8 @@ A\*、ACO（蚁群）、PSO（粒子群）、SA（模拟退火）、混合优化
 
 ## 当前主链路
 
-地图/参数输入 → 环境分析 → 文献与历史实验检索 → 五算法统一实验 →
-数据驱动选型与参数推荐 → 科学假设 → 实验验证 → 反思 → 人工复核 → 报告。
+地图/参数输入 → 地图校验与环境分析 → 历史画像先验与假设 → 五算法实验 →
+当前地图评分与假设判断 → 反思和可选修正 → 人工复核 → 报告。
 
 ## 本地验证
 
@@ -160,6 +159,8 @@ cd ".\路径规划虚拟仿真闭环AI科学家系统"
 .\.venv\Scripts\python.exe -B tools\review_literature.py --checklist
 .\.venv\Scripts\python.exe -B tools\review_literature.py --approve <paper_id> --reviewer <姓名>
 ```
+
+快速离线当前地图实验可在主线目录中运行 `.\.venv\Scripts\python.exe -B .\main.py --full`。GUI、API `/analyze`、`/experiment` 和兼容闭环调用同一服务；API `/analyze` 可接收二维 `grid`，或按尺寸、障碍率与种子生成地图。快速示例为 30×30、种子 42、每算法三次、每次一秒预算，并额外运行扰动评估。`/experiment` 为可比较性始终运行五算法，`algorithms` 记录请求偏好。结果包含地图哈希、SQLite 记录 ID、逐次结果、评分权重和离线状态；运行完成后若总耗时超过 60 秒标记预算超限，协作式算法超时不是强制进程终止。动态模式在同一固定起终点的地图序列逐帧规划，不模拟机器人沿路径运动。单图结果不代表跨地图结论；运行耗时受系统负载影响，即使种子相同也不保证排名完全相同。历史六智能体 CLI 保留为无参数兼容入口。
 
 真实密钥只允许保存在本地 `.env` 或 Streamlit secrets 中，不得提交到 Git。
 
